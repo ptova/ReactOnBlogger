@@ -1,120 +1,53 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg?inline'
-import viteLogo from './assets/vite.svg?inline'
-import heroImg from './assets/hero.png?inline'
-import icons from './assets/icons.svg?raw' // 👈 import full SVG sprite as text
-import './App.css'
+import {useEffect, useState} from 'react';
+import './App.css';
+import type {Post} from './types/post';
+import {loadPosts} from './services/postService';
+import LoadingSpinner from './components/LoadingSpinner';
+import ErrorDisplay from './components/ErrorDisplay';
+import PostCard from './components/PostCard';
+
+const BASE_URL = import.meta.env.DEV
+    ? "examplePostSource.html"
+    : import.meta.env.VITE_API_URL;
 
 function App() {
-  const [count, setCount] = useState(0)
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-  return (
-    <>
-      {/* 👇 Inject SVG sprite once */}
-      <div dangerouslySetInnerHTML={{ __html: icons }} />
+    useEffect(() => {
+        const fetchPosts = async () => {
+            try {
+                const data = await loadPosts(BASE_URL);
+                setPosts(data);
+                setLoading(false);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'An error occurred');
+                setLoading(false);
+            }
+        };
 
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="178" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+        fetchPosts();
+    }, []);
 
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
+    if (loading) {
+        return <LoadingSpinner/>;
+    }
 
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    if (error) {
+        return <ErrorDisplay error={error}/>;
+    }
 
-      <div className="ticks"></div>
+    return (<div className="app">
+            <header className="app-header">
+                <h1>Posts Display</h1>
+                <p className="post-count">Total posts: {posts.length}</p>
+            </header>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            {/* 👇 no path anymore */}
-            <use href="#documentation-icon"></use>
-          </svg>
-
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="#social-icon"></use>
-          </svg>
-
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg className="button-icon">
-                  <use href="#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg className="button-icon">
-                  <use href="#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg className="button-icon">
-                  <use href="#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg className="button-icon">
-                  <use href="#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+            <main className="posts-container">
+                {posts.map((post) => (<PostCard key={post.id} post={post}/>))}
+            </main>
+        </div>);
 }
 
-export default App
+export default App;

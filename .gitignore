@@ -24,6 +24,6 @@ dist-ssr
 /dist/
 .env
 /resources/toDeploy.html
-/resources/examplePostSource.html
+/public/examplePostSource.html
 /resources/postOuter.html
 /resources/samplePostsData.json
