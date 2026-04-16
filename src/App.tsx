@@ -1,53 +1,33 @@
-import {useEffect, useState} from 'react';
-import './App.css';
-import type {Post} from './types/post';
-import {loadPosts} from './services/postService';
-import LoadingSpinner from './components/LoadingSpinner';
-import ErrorDisplay from './components/ErrorDisplay';
-import PostCard from './components/PostCard';
+import PostsContainer from './components/PostsContainer';
 
-const BASE_URL = import.meta.env.DEV
-    ? "examplePostSource.html"
-    : import.meta.env.VITE_API_URL;
+// ===== STYLE CONSTANTS =====
+
+// Root container (full page background)
+const appContainerStyles = ['min-h-screen', 'bg-gradient-to-br', 'from-purple-500', 'to-indigo-600'].join(' ');
+
+// Inner wrapper
+const wrapperStyles = ['max-w-6xl', 'mx-auto', 'px-4', 'sm:px-5', 'py-5', 'sm:py-6'].join(' ');
+
+// Header styles
+const headerStyles = ['text-center', 'text-white', 'py-8', 'sm:py-10', 'mb-6', 'sm:mb-10'].join(' ');
+
+// Title styles
+const headerTitleStyles = ['text-3xl', 'sm:text-4xl', 'md:text-5xl', 'font-bold', 'mb-2', 'sm:mb-3', 'drop-shadow-lg'].join(' ');
 
 function App() {
-    const [posts, setPosts] = useState<Post[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    return (
+        <div className={appContainerStyles}>
+            <div className={wrapperStyles}>
+                <header className={headerStyles}>
+                    <h1 className={headerTitleStyles}>
+                        REACT On Blogger
+                    </h1>
+                </header>
 
-    useEffect(() => {
-        const fetchPosts = async () => {
-            try {
-                const data = await loadPosts(BASE_URL);
-                setPosts(data);
-                setLoading(false);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'An error occurred');
-                setLoading(false);
-            }
-        };
-
-        fetchPosts();
-    }, []);
-
-    if (loading) {
-        return <LoadingSpinner/>;
-    }
-
-    if (error) {
-        return <ErrorDisplay error={error}/>;
-    }
-
-    return (<div className="app">
-            <header className="app-header">
-                <h1>Posts Display</h1>
-                <p className="post-count">Total posts: {posts.length}</p>
-            </header>
-
-            <main className="posts-container">
-                {posts.map((post) => (<PostCard key={post.id} post={post}/>))}
-            </main>
-        </div>);
+                <PostsContainer />
+            </div>
+        </div>
+    );
 }
 
 export default App;

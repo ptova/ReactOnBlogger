@@ -12,6 +12,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# Fetch latest remote state to avoid stale info error
+git fetch deploy
+if [ $? -ne 0 ]; then
+    echo "Warning: Failed to fetch from deploy remote, continuing anyway..."
+fi
+
 GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes" git push --progress --porcelain deploy refs/heads/svil:svil --force-with-lease
 if [ $? -ne 0 ]; then
     echo "Error: Failed to push to deploy remote"
