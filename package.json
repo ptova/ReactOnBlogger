@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "npm run build && ./deploy-theme.sh"
+    "git-deploy": "scripts/git-deploy.sh",
+    "theme-deploy": "scripts/deploy-theme.sh",
+    "complete-deploy": "npm run build && npm run git-deploy && npm run theme-deploy"
   },
   "dependencies": {
     "react": "^19.2.4",

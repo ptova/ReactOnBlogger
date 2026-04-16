@@ -1,31 +1,13 @@
 #!/bin/bash
 
-git add dist -f
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to add dist directory"
-    exit 1
-fi
-
-git commit --amend --no-edit dist
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to amend commit"
-    exit 1
-fi
-
-GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes" git push --progress --porcelain deploy refs/heads/svil:svil --force-with-lease
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to push to deploy remote"
-    exit 1
-fi
-
 # ===== CONFIGURATION SECTION =====
 # File paths and line numbers
 EXTRACT_LINE_START=8
 EXTRACT_LINE_END=9
-REPLACE_LINE_START=17
-REPLACE_LINE_END=18
+REPLACE_LINE_START=23
+REPLACE_LINE_END=24
 INPUT_FILE="dist/index.html"
-TEMPLATE_FILE="resources/sample.html"
+TEMPLATE_FILE="resources/template.html"
 OUTPUT_FILE="resources/toDeploy.html"
 ENV_FILE_PATH=".env"
 
