@@ -37,7 +37,7 @@ export default function PostsContainer() {
     // Handle keyboard navigation
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (posts.length === 0) return;
+            if (posts.length === 0 || (modalImageUrl && modalImageUrl.length > 0)) return;
 
             const isDownArrow = event.key === 'ArrowDown' || event.key === ' ' || event.key === 'Spacebar' || event.code === 'Space';
             const isUpArrow = event.key === 'ArrowUp';
@@ -67,7 +67,7 @@ export default function PostsContainer() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [posts, currentFocusIndex]);
+    }, [posts, currentFocusIndex, modalImageUrl]);
 
     if (loading) {
         return <LoadingSpinner/>;
@@ -92,7 +92,7 @@ export default function PostsContainer() {
         </main>
         <ScrollToTopButton/>
         {modalImageUrl !== null && createPortal(<ImageModal
-            imageUrl={modalImageUrl}
+            imageUrls={[modalImageUrl, modalImageUrl, modalImageUrl]}
             isOpen={true}
             onClose={() => setModalImageUrl(null)}
         />, document.body)}

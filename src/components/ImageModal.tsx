@@ -1,25 +1,16 @@
+import * as React from 'react';
 import {useEffect, useState} from 'react';
-import * as React from "react";
 
 interface ImageModalProps {
-    imageUrl: string;
+    imageUrls: string[];  // Changed from single imageUrl to array
     isOpen: boolean;
     onClose: () => void;
 }
 
-// ===== STYLE CONSTANTS =====
-const overlayStyles = ['fixed inset-0', 'bg-black/90', 'z-50', 'flex items-center justify-center', 'p-4', 'backdrop-blur-sm'].join(' ');
-
-const modalContainerStyles = ['relative', 'max-w-[95vw]', 'max-h-[95vh]', 'flex items-center justify-center'].join(' ');
-
-const imageStyles = ['max-w-[95vw]', 'max-h-[95vh]', 'w-auto', 'h-auto', 'object-contain', 'rounded-lg', 'shadow-2xl'].join(' ');
-
-const closeButtonStyles = ['absolute top-4 right-4', 'bg-white/10 hover:bg-white/20', 'text-white', 'rounded-full p-2', 'transition-all duration-200', 'cursor-pointer', 'z-10', 'backdrop-blur-sm'].join(' ');
-
-const closeIconStyles = 'w-6 h-6';
-
-export default function ImageModal({imageUrl, isOpen, onClose}: ImageModalProps) {
+export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps) {
     const [isAnimating, setIsAnimating] = useState(false);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const containerRef = React.useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {
@@ -28,23 +19,51 @@ export default function ImageModal({imageUrl, isOpen, onClose}: ImageModalProps)
             }
         };
 
+        const handleArrowKeys = (event: KeyboardEvent) => {
+            if (!isOpen) return;
+
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                setCurrentIndex(prev => Math.max(0, prev - 1));
+            } else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                setCurrentIndex(prev => Math.min(imageUrls.length - 1, prev + 1));
+            }
+        };
+
         if (isOpen) {
             document.body.style.overflow = 'hidden';
             window.addEventListener('keydown', handleEscape);
+            window.addEventListener('keydown', handleArrowKeys);
             // Trigger animation after a microtask to avoid the warning
             Promise.resolve().then(() => setIsAnimating(true));
         } else {
             document.body.style.overflow = 'unset';
             window.removeEventListener('keydown', handleEscape);
+            window.removeEventListener('keydown', handleArrowKeys);
             // Reset animation state when closing
             Promise.resolve().then(() => setIsAnimating(false));
+            // Reset index when modal closes
+            Promise.resolve().then(() => setCurrentIndex(0));
         }
 
         return () => {
             document.body.style.overflow = 'unset';
             window.removeEventListener('keydown', handleEscape);
+            window.removeEventListener('keydown', handleArrowKeys);
         };
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose, imageUrls.length]);
+
+    // Scroll to current image when index changes
+    useEffect(() => {
+        if (containerRef.current && imageUrls[currentIndex]) {
+            const imageElements = containerRef.current.querySelectorAll('[data-image-index]');
+            const currentImageElement = imageElements[currentIndex] as HTMLElement;
+            if (currentImageElement) {
+                currentImageElement.scrollIntoView({behavior: 'smooth', block: 'start'});
+            }
+        }
+    }, [currentIndex, imageUrls]);
 
     if (!isOpen) return null;
 
@@ -55,40 +74,119 @@ export default function ImageModal({imageUrl, isOpen, onClose}: ImageModalProps)
     };
 
     return (<div
-        className={overlayStyles}
-        onClick={handleOverlayClick}
         style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            zIndex: 50,
+            backdropFilter: 'blur(4px)',
+            overflowY: 'auto',
             animation: isAnimating ? 'fadeIn 0.2s ease-out' : 'none'
         }}
+        onClick={handleOverlayClick}
     >
-        <button
-            onClick={onClose}
-            className={closeButtonStyles}
-            aria-label="Close modal"
-        >
-            <svg
-                className={closeIconStyles}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-            >
-                <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                />
-            </svg>
-        </button>
-        <div className={modalContainerStyles}>
-            <img
-                src={imageUrl}
-                alt="Full size image"
-                className={imageStyles}
+        <div style={{
+            position: "sticky", top: '1rem', height: 0, zIndex: 10,
+        }}>
+            <button
+                onClick={onClose}
                 style={{
-                    animation: isAnimating ? 'scaleIn 0.2s ease-out' : 'none'
+                    position: 'absolute',
+                    right: '1rem',
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    borderRadius: '9999px',
+                    padding: '0.5rem',
+                    transition: 'all 0.2s',
+                    cursor: 'pointer',
+                    backdropFilter: 'blur(4px)'
                 }}
-            />
+                aria-label="Close modal"
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                }}
+            >
+                <svg
+                    style={{width: '1.5rem', height: '1.5rem'}}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                    />
+                </svg>
+            </button>
+            {/* Image counter indicator */}
+            <div style={{
+                position: 'absolute',
+                top: '1rem',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                color: 'white',
+                padding: '0.5rem 1rem',
+                borderRadius: '9999px',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                backdropFilter: 'blur(4px)',
+                pointerEvents: 'none'
+            }}>
+                {currentIndex + 1} / {imageUrls.length}
+            </div>
+        </div>
+        <div
+            ref={containerRef}
+            style={{
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'start'
+            }}
+        >
+            {imageUrls.map((imageUrl, index) => (<div
+                key={index}
+                data-image-index={index}
+                style={{
+                    minHeight: '100vh',
+                    width: '100%',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    scrollSnapAlign: 'start',
+                    border: index === currentIndex ? '2px solid rgba(255, 255, 255, 0.3)' : '2px solid transparent',
+                    transition: 'border-color 0.2s ease'
+                }}
+            >
+                <img
+                    src={imageUrl}
+                    alt={`Full size image ${index + 1}`}
+                    style={{
+                        maxWidth: '95vw',
+                        maxHeight: '90vh',
+                        width: 'auto',
+                        height: 'auto',
+                        objectFit: 'contain' as const,
+                        borderRadius: '0.5rem',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        opacity: index === currentIndex ? 1 : 0.7,
+                        transition: 'opacity 0.2s ease',
+                        animationName: isAnimating ? 'scaleIn' : 'none',
+                        animationDuration: '0.2s',
+                        animationTimingFunction: 'ease-out',
+                        animationDelay: isAnimating ? `${index * 0.05}s` : '0s',
+                        animationFillMode: 'both'
+                    }}
+                />
+            </div>))}
         </div>
         <style>{`
             @keyframes fadeIn {
@@ -109,5 +207,6 @@ export default function ImageModal({imageUrl, isOpen, onClose}: ImageModalProps)
                 opacity: 1;
               }
             }
-          `}</style>
-    </div>);}
+        `}</style>
+    </div>);
+}
