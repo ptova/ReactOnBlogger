@@ -1,8 +1,11 @@
 import type {Post} from '../types/post';
+import {useEffect} from "react";
 
 interface PostCardProps {
     post: Post;
+    onImageClick: (imageUrl: string) => void;
 }
+
 
 // ===== STYLE CONSTANTS =====
 
@@ -33,8 +36,8 @@ const imageStyles = ['[&_img]:!max-w-[100%]', '[&_img]:!max-h-[60vh]', '[&_ifram
 // Video styles (inside prose-content)
 const videoStyles = ['[&_iframe]:!max-w-[100%]', '[&_iframe]:!max-h-[60vh]', '[&_iframe]:!min-h-[60vh]', '[&_iframe]:!rounded-lg',].join(' ');
 
-// Image link styles (centering images inside anchors)
-const imageLinkStyles = ['[&_a:has(img)]:!flex', '[&_a:has(img)]:!justify-center', '[&_a:has(img)]:!items-center'].join(' ');
+// Image link styles (centering images inside anchors) - MODIFIED: add cursor pointer
+const imageLinkStyles = ['[&_a:has(img)]:!flex', '[&_a:has(img)]:!justify-center', '[&_a:has(img)]:!items-center', '[&_a:has(img)]:!cursor-pointer'].join(' ');
 
 // Paragraph styles
 const paragraphStyles = '[&_p]:mb-4';
@@ -45,33 +48,69 @@ const linkStyles = ['[&_a]:text-indigo-400', '[&_a]:no-underline', '[&_a]:border
 // Prose content container (combines all content styles)
 const proseContentStyles = ['prose-content', 'text-gray-300', 'leading-relaxed', 'text-sm', 'sm:text-base', 'max-h-[70vh]', 'overflow-y-auto', imageStyles, imageLinkStyles, paragraphStyles, linkStyles, videoStyles, separatorStyles].join(' ');
 
+function PostCard({post, onImageClick}: PostCardProps) {
 
+    // Add click handlers to images inside links
+    useEffect(() => {
+        const contentDiv = document.getElementById(`post-content-${post.id}`);
+        if (!contentDiv) return;
 
+        // Find all anchor tags that contain images
+        const imageLinks = contentDiv.querySelectorAll('a:has(img)');
 
-function PostCard({post}: PostCardProps) {
-    return (<article className={articleStyles}>
-        <h2 className={titleStyles} title={post.title}>
-            {post.title}
-        </h2>
+        const handleImageClick = (event: Event) => {
+            event.preventDefault();
+            const anchor = event.currentTarget as HTMLAnchorElement;
+            const img = anchor.querySelector('img');
+            if (img && img.src) {
+                onImageClick(img.src);
+            }
+        };
 
-        <div className={metaContainerStyles}>
-                <span className={dateStyles}>
-                    {new Date(post.datePublished).toLocaleDateString('en-US', {
-                        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                    })}
-                </span>
+        imageLinks.forEach(link => {
+            link.addEventListener('click', handleImageClick);
+            // Add cursor pointer to indicate clickability
+            (link as HTMLElement).style.cursor = 'pointer';
+        });
 
-            <div className={labelsContainerStyles}>
-                {post.labels.map((label, index) => (<span key={index} className={labelStyles}>
-                            {label}
-                        </span>))}
+        return () => {
+            imageLinks.forEach(link => {
+                link.removeEventListener('click', handleImageClick);
+                (link as HTMLElement).style.cursor = '';
+            });
+        };
+    }, [post.id, post.content, onImageClick]);
+
+    return (<>
+        <article className={articleStyles}>
+            <h2 className={titleStyles} title={post.title}>
+                {post.title}
+            </h2>
+
+            <div className={metaContainerStyles}>
+                    <span className={dateStyles}>
+                        {new Date(post.datePublished).toLocaleDateString('en-US', {
+                            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                        })}
+                    </span>
+
+                <div className={labelsContainerStyles}>
+                    {post.labels.map((label, index) => (<span key={index} className={labelStyles}>
+                                {label}
+                            </span>))}
+                </div>
             </div>
-        </div>
 
-        <div className={proseContentStyles}>
-            <div dangerouslySetInnerHTML={{__html: post.content}}/>
-        </div>
-    </article>);
+            <div
+                id={`post-content-${post.id}`}
+                className={proseContentStyles}
+            >
+                <div dangerouslySetInnerHTML={{__html: post.content}}/>
+            </div>
+        </article>
+
+
+    </>);
 }
 
 export default PostCard;

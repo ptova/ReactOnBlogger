@@ -4,6 +4,8 @@ import {loadPosts} from '../services/postService';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorDisplay from './ErrorDisplay';
 import PostCard from './PostCard';
+import ImageModal from "./ImageModal.tsx";
+import {createPortal} from "react-dom";
 
 const BASE_URL = import.meta.env.DEV ? "examplePostSource.html" : import.meta.env.VITE_API_URL;
 
@@ -18,6 +20,7 @@ export default function PostsContainer() {
     const [error, setError] = useState<string | null>(null);
     const postRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [currentFocusIndex, setCurrentFocusIndex] = useState<number>(-1);
+    const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
 
     useEffect(() => {
         loadPosts(BASE_URL)
@@ -77,17 +80,22 @@ export default function PostsContainer() {
     return (<>
         <main className={mainStyles}>
             {posts.map((post, index) => (<div
-                    key={post.id}
-                    ref={(el) => {
-                        postRefs.current[index] = el;
-                    }} tabIndex={-1}
-                    onFocus={() => setCurrentFocusIndex(index)}
-                    style={{outline: 'none'}}
-                >
-                    <MemoizedPostCard post={post}/>
-                </div>))}
+                key={post.id}
+                ref={(el) => {
+                    postRefs.current[index] = el;
+                }} tabIndex={-1}
+                onFocus={() => setCurrentFocusIndex(index)}
+                style={{outline: 'none'}}
+            >
+                <MemoizedPostCard post={post} onImageClick={setModalImageUrl}/>
+            </div>))}
         </main>
         <ScrollToTopButton/>
+        {modalImageUrl !== null && createPortal(<ImageModal
+            imageUrl={modalImageUrl}
+            isOpen={true}
+            onClose={() => setModalImageUrl(null)}
+        />, document.body)}
     </>);
 }
 
