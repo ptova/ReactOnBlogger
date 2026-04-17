@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {memo, useEffect, useRef, useState} from 'react';
 import type {Post} from '../types/post';
 import {loadPosts} from '../services/postService';
 import LoadingSpinner from './LoadingSpinner';
@@ -9,21 +9,62 @@ const BASE_URL = import.meta.env.DEV ? "examplePostSource.html" : import.meta.en
 
 const mainStyles = ['space-y-6', 'sm:space-y-8'].join(' ');
 
+// Memoize PostCard to prevent unnecessary re-renders
+const MemoizedPostCard = memo(PostCard);
+
 export default function PostsContainer() {
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const postRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const [currentFocusIndex, setCurrentFocusIndex] = useState<number>(-1);
 
     useEffect(() => {
         loadPosts(BASE_URL)
             .then(data => {
                 setPosts(data);
+                setCurrentFocusIndex(-1);
             })
             .catch(err => {
                 setError(err instanceof Error ? err.message : 'An error occurred');
             })
             .finally(() => setLoading(false));
     }, []);
+
+    // Handle keyboard navigation
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (posts.length === 0) return;
+
+            const isDownArrow = event.key === 'ArrowDown' || event.key === ' ' || event.key === 'Spacebar' || event.code === 'Space';
+            const isUpArrow = event.key === 'ArrowUp';
+
+            if (!isDownArrow && !isUpArrow) return;
+
+            event.preventDefault();
+
+            let nextIndex = currentFocusIndex;
+
+            if (isDownArrow) {
+                nextIndex = currentFocusIndex === -1 ? 0 : Math.min(currentFocusIndex + 1, posts.length - 1);
+            } else if (isUpArrow) {
+                nextIndex = currentFocusIndex === -1 ? posts.length - 1 : Math.max(currentFocusIndex - 1, 0);
+            }
+
+            if (nextIndex !== currentFocusIndex) {
+                setCurrentFocusIndex(nextIndex);
+                const nextCard = postRefs.current[nextIndex];
+                if (nextCard) {
+                    nextCard.focus();
+                    // Optional: smooth scroll to the focused card
+                    nextCard.scrollIntoView({behavior: 'smooth', block: 'center'});
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [posts, currentFocusIndex]);
 
     if (loading) {
         return <LoadingSpinner/>;
@@ -35,7 +76,16 @@ export default function PostsContainer() {
 
     return (<>
         <main className={mainStyles}>
-            {posts.map((post) => (<PostCard key={post.id} post={post}/>))}
+            {posts.map((post, index) => (<div
+                    key={post.id}
+                    ref={(el) => {
+                        postRefs.current[index] = el;
+                    }} tabIndex={-1}
+                    onFocus={() => setCurrentFocusIndex(index)}
+                    style={{outline: 'none'}}
+                >
+                    <MemoizedPostCard post={post}/>
+                </div>))}
         </main>
         <ScrollToTopButton/>
     </>);
