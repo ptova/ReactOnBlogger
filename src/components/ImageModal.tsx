@@ -1,5 +1,6 @@
 import * as React from 'react';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
+import {handleArrowsScroll, trackVisibleItemOnScroll} from "../shared/utils.ts";
 
 interface ImageModalProps {
     imageUrls: string[];  // Changed from single imageUrl to array
@@ -7,63 +8,46 @@ interface ImageModalProps {
     onClose: () => void;
 }
 
+
 export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps) {
     const [isAnimating, setIsAnimating] = useState(false);
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const containerRef = React.useRef<HTMLDivElement>(null);
+    const [currentFocusIndex, setCurrentFocusIndex] = useState(0);
+    const containerRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const scrollTimeoutRef = useRef<number | null>(null);
+
+    // Update current focus index based on scroll position
+    useEffect(() => {
+        const scrollContainer = document.getElementById('modal-scroll-container');
+        if (!scrollContainer) return;
+        return trackVisibleItemOnScroll(imageUrls, scrollTimeoutRef, containerRefs, setCurrentFocusIndex, scrollContainer);
+    }, [imageUrls]);
+
 
     useEffect(() => {
-        const handleEscape = (event: KeyboardEvent) => {
+
+        const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape' && isOpen) {
                 onClose();
             }
+            handleArrowsScroll(event, currentFocusIndex, imageUrls, setCurrentFocusIndex, containerRefs);
         };
-
-        const handleArrowKeys = (event: KeyboardEvent) => {
-            if (!isOpen) return;
-
-            if (event.key === 'ArrowUp') {
-                event.preventDefault();
-                setCurrentIndex(prev => Math.max(0, prev - 1));
-            } else if (event.key === 'ArrowDown') {
-                event.preventDefault();
-                setCurrentIndex(prev => Math.min(imageUrls.length - 1, prev + 1));
-            }
-        };
-
         if (isOpen) {
             document.body.style.overflow = 'hidden';
-            window.addEventListener('keydown', handleEscape);
-            window.addEventListener('keydown', handleArrowKeys);
-            // Trigger animation after a microtask to avoid the warning
+            window.addEventListener('keydown', handleKeyDown);
             Promise.resolve().then(() => setIsAnimating(true));
         } else {
             document.body.style.overflow = 'unset';
-            window.removeEventListener('keydown', handleEscape);
-            window.removeEventListener('keydown', handleArrowKeys);
+            window.removeEventListener('keydown', handleKeyDown);
             // Reset animation state when closing
             Promise.resolve().then(() => setIsAnimating(false));
             // Reset index when modal closes
-            Promise.resolve().then(() => setCurrentIndex(0));
+            Promise.resolve().then(() => setCurrentFocusIndex(0));
         }
-
         return () => {
             document.body.style.overflow = 'unset';
-            window.removeEventListener('keydown', handleEscape);
-            window.removeEventListener('keydown', handleArrowKeys);
+            window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [isOpen, onClose, imageUrls.length]);
-
-    // Scroll to current image when index changes
-    useEffect(() => {
-        if (containerRef.current && imageUrls[currentIndex]) {
-            const imageElements = containerRef.current.querySelectorAll('[data-image-index]');
-            const currentImageElement = imageElements[currentIndex] as HTMLElement;
-            if (currentImageElement) {
-                currentImageElement.scrollIntoView({behavior: 'smooth', block: 'start'});
-            }
-        }
-    }, [currentIndex, imageUrls]);
+    }, [isOpen, onClose, imageUrls.length, currentFocusIndex, imageUrls]);
 
     if (!isOpen) return null;
 
@@ -74,6 +58,7 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
     };
 
     return (<div
+        id="modal-scroll-container"
         style={{
             position: 'fixed',
             inset: 0,
@@ -138,11 +123,10 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
                 backdropFilter: 'blur(4px)',
                 pointerEvents: 'none'
             }}>
-                {currentIndex + 1} / {imageUrls.length}
+                {currentFocusIndex + 1} / {imageUrls.length}
             </div>
         </div>
         <div
-            ref={containerRef}
             style={{
                 position: 'relative',
                 display: 'flex',
@@ -154,6 +138,9 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
             {imageUrls.map((imageUrl, index) => (<div
                 key={index}
                 data-image-index={index}
+                ref={(el) => {
+                    containerRefs.current[index] = el;
+                }}
                 style={{
                     minHeight: '100vh',
                     width: '100%',
@@ -161,8 +148,7 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    scrollSnapAlign: 'start',
-                    border: index === currentIndex ? '2px solid rgba(255, 255, 255, 0.3)' : '2px solid transparent',
+                    scrollSnapAlign: 'start', // border: index === currentFocusIndex ? '2px solid rgba(255, 255, 255, 0.3)' : '2px solid transparent',
                     transition: 'border-color 0.2s ease'
                 }}
             >
@@ -177,7 +163,7 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
                         objectFit: 'contain' as const,
                         borderRadius: '0.5rem',
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                        opacity: index === currentIndex ? 1 : 0.7,
+                        opacity: index === currentFocusIndex ? 1 : 0.7,
                         transition: 'opacity 0.2s ease',
                         animationName: isAnimating ? 'scaleIn' : 'none',
                         animationDuration: '0.2s',
