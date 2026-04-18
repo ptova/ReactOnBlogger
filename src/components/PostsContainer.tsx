@@ -26,7 +26,7 @@ export default function PostsContainer() {
     const [error, setError] = useState<string | null>(null);
     const containerRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [currentFocusIndex, setCurrentFocusIndex] = useState<number>(-1);
-    const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
+    const [modalImageUrl, setModalImageUrl] = useState<string[] | null>(null);
     const scrollTimeoutRef = useRef<number | null>(null);
 
     useEffect(() => {
@@ -79,7 +79,7 @@ export default function PostsContainer() {
         </main>
         <ScrollToTopButton/>
         {modalImageUrl !== null && createPortal(<ImageModal
-            imageUrls={[modalImageUrl, modalImageUrl, modalImageUrl]}
+            imageUrls={modalImageUrl}
             isOpen={true}
             onClose={() => setModalImageUrl(null)}
         />, document.body)}

@@ -3,7 +3,7 @@ import {useEffect} from "react";
 
 interface PostCardProps {
     post: Post;
-    onImageClick: (imageUrl: string) => void;
+    onImageClick: (imageUrl: string[]) => void;
 }
 
 
@@ -60,11 +60,21 @@ function PostCard({post, onImageClick}: PostCardProps) {
 
         const handleImageClick = (event: Event) => {
             event.preventDefault();
-            const anchor = event.currentTarget as HTMLAnchorElement;
-            const img = anchor.querySelector('img');
-            if (img && img.src) {
-                onImageClick(img.src);
+            const imgs = contentDiv.querySelectorAll('img');
+            const urls=[]
+            for (const img of imgs) {
+                if (img?.src) {
+                    try {
+                        const raw = img.dataset?.info;
+                        const parsed = raw && JSON.parse(raw.replace(/'([^']*)'/g, '"$1"'));
+                        urls.push(...(Array.isArray(parsed) ? parsed : [img.src]));
+                    } catch {
+                        urls.push(img.src)
+                    }
+                }
             }
+            onImageClick(urls)
+
         };
 
         imageLinks.forEach(link => {
