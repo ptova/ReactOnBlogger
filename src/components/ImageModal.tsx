@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {handleArrowsScroll, trackVisibleItemOnScroll} from "../shared/utils.ts";
 
 interface ImageModalProps {
@@ -20,14 +20,40 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
         const scrollContainer = document.getElementById('modal-scroll-container');
         if (!scrollContainer) return;
         return trackVisibleItemOnScroll(imageUrls, scrollTimeoutRef, containerRefs, setCurrentFocusIndex, scrollContainer);
-    }, [imageUrls]);
+    }, [imageUrls, isOpen]);
 
 
+    const hasPushedRef = useRef(false);
+
+    useEffect(() => {
+        if (isOpen && !hasPushedRef.current) {
+            history.pushState({modal: true}, "");
+            hasPushedRef.current = true;
+        }
+    }, [isOpen]);
+    useEffect(() => {
+        const handlePopState = () => {
+            if (hasPushedRef.current) {
+                hasPushedRef.current = false;
+                onClose();
+            }
+        };
+
+        window.addEventListener("popstate", handlePopState);
+        return () => window.removeEventListener("popstate", handlePopState);
+    }, [onClose]);
+    const handleClose = useCallback(() => {
+        if (history.state?.modal) {
+            history.back(); // triggers popstate → onClose
+        } else {
+            onClose();
+        }
+    }, [onClose]);
     useEffect(() => {
 
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape' && isOpen) {
-                onClose();
+                handleClose();
             }
             handleArrowsScroll(event, currentFocusIndex, imageUrls, setCurrentFocusIndex, containerRefs);
         };
@@ -47,7 +73,7 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
             document.body.style.overflow = 'unset';
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [isOpen, onClose, imageUrls.length, currentFocusIndex, imageUrls]);
+    }, [isOpen, onClose, imageUrls.length, currentFocusIndex, imageUrls, handleClose]);
 
     if (!isOpen) return null;
 
@@ -74,7 +100,7 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
             position: "sticky", top: '1rem', height: 0, zIndex: 10,
         }}>
             <button
-                onClick={onClose}
+                onClick={handleClose}
                 style={{
                     position: 'absolute',
                     right: '1rem',

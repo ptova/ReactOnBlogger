@@ -47,7 +47,6 @@ export const parsePost = (postElement: Element): Post => {
 
     // Get datePublished from JSON-LD or fallback to empty string
     const datePublished = jsonLdData.datePublished || '';
-
     return {
         title, content, id, labels, datePublished
     };
@@ -60,13 +59,8 @@ const checkStatus = (response: Response): Promise<string> => {
     return response.text();
 };
 
-const handleError = (error: Error): Post[] => {
-    console.error('Failed to load posts:', error);
-    return [];
-};
 
 export const loadPosts = (url: string): Promise<Post[]> => fetch(url)
     .then(checkStatus)
     .then(gatherPosts)
     .then(posts => posts.map(parsePost))
-    .catch(handleError);

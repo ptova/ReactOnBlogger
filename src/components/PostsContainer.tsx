@@ -9,7 +9,10 @@ import {createPortal} from "react-dom";
 import {ScrollToTopButton} from "./ScrollToTopButton.tsx";
 import {handleArrowsScroll, trackVisibleItemOnScroll} from "../shared/utils.ts";
 
-const BASE_URL = import.meta.env.DEV ? "examplePostSource.html" : import.meta.env.VITE_API_URL;
+const BASE_URL = import.meta.env.DEV ?
+    "examplePostSource.html"
+    // "https://test-interface-20260412.blogspot.com"
+    : import.meta.env.VITE_API_URL;
 
 const mainStyles = ['space-y-6', 'sm:space-y-8'].join(' ');
 
