@@ -10,7 +10,7 @@ interface PostCardProps {
 // ===== STYLE CONSTANTS =====
 
 // Article (card) styles
-const articleStyles = ['h-[95vh]','bg-gray-900', 'rounded-xl', 'p-4', 'sm:p-6', 'md:p-8', 'shadow-lg', 'hover:shadow-xl', 'transition-all', 'duration-300', 'hover:-translate-y-1'].join(' ');
+const articleStyles = ['h-[95vh]', 'bg-gray-900', 'rounded-xl', 'p-4', 'sm:p-6', 'md:p-8', 'shadow-lg', 'hover:shadow-xl', 'transition-all', 'duration-300', 'hover:-translate-y-1'].join(' ');
 
 // Title styles
 const titleStyles = ['text-gray-100', 'text-xl', 'sm:text-2xl', 'md:text-3xl', 'font-bold', 'mb-3', 'sm:mb-4', 'leading-tight', 'truncate', 'max-w-full'].join(' ');
@@ -61,7 +61,7 @@ function PostCard({post, onImageClick}: PostCardProps) {
         const handleImageClick = (event: Event) => {
             event.preventDefault();
             const imgs = contentDiv.querySelectorAll('img');
-            const urls=[]
+            const urls = []
             for (const img of imgs) {
                 if (img?.src) {
                     try {
@@ -91,9 +91,16 @@ function PostCard({post, onImageClick}: PostCardProps) {
         };
     }, [post.id, post.content, onImageClick]);
 
-    return (<>
-        <article className={articleStyles}>
-            <h2 className={titleStyles} title={post.title}>
+    return (<article
+            className={articleStyles}
+            tabIndex={-1}
+            style={{
+                outline: 'none',
+            }}>
+            <h2
+                className={titleStyles}
+                title={post.title}
+            >
                 {post.title}
             </h2>
 
@@ -119,8 +126,7 @@ function PostCard({post, onImageClick}: PostCardProps) {
             </div>
         </article>
 
-
-    </>);
+    );
 }
 
 export default PostCard;

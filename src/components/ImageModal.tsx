@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {handleArrowsScroll, trackVisibleItemOnScroll} from "../shared/utils.ts";
+import ListWithVirtualScroll from "./ListWithVirtualScroll.tsx";
 
 interface ImageModalProps {
     imageUrls: string[];  // Changed from single imageUrl to array
@@ -13,14 +13,6 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
     const [isAnimating, setIsAnimating] = useState(false);
     const [currentFocusIndex, setCurrentFocusIndex] = useState(0);
     const containerRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const scrollTimeoutRef = useRef<number | null>(null);
-
-    // Update current focus index based on scroll position
-    useEffect(() => {
-        const scrollContainer = document.getElementById('modal-scroll-container');
-        if (!scrollContainer) return;
-        return trackVisibleItemOnScroll(imageUrls, scrollTimeoutRef, containerRefs, setCurrentFocusIndex, scrollContainer);
-    }, [imageUrls, isOpen]);
 
 
     const hasPushedRef = useRef(false);
@@ -55,7 +47,6 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
             if (event.key === 'Escape' && isOpen) {
                 handleClose();
             }
-            handleArrowsScroll(event, currentFocusIndex, imageUrls, setCurrentFocusIndex, containerRefs);
         };
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -82,7 +73,46 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
             onClose();
         }
     };
+    const onIndexChange = (newIndex: number) => setCurrentFocusIndex(newIndex)
 
+    const elements = imageUrls.map((imageUrl, index) => (<div
+        key={index}
+        data-image-index={index}
+        ref={(el) => {
+            containerRefs.current[index] = el;
+        }}
+        style={{
+            minHeight: '95vh',
+            width: '100%',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            scrollSnapAlign: 'start', // border: index === currentFocusIndex ? '2px solid rgba(255, 255, 255, 0.3)' : '2px solid transparent',
+            transition: 'border-color 0.2s ease'
+        }}
+    >
+        <img
+            src={imageUrl}
+            alt={`Full size image ${index + 1}`}
+            style={{
+                maxWidth: '95vw',
+                maxHeight: '90vh',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain' as const,
+                borderRadius: '0.5rem',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                opacity: index === currentFocusIndex ? 1 : 0.7,
+                transition: 'opacity 0.2s ease',
+                animationName: isAnimating ? 'scaleIn' : 'none',
+                animationDuration: '0.2s',
+                animationTimingFunction: 'ease-out',
+                animationDelay: isAnimating ? `${index * 0.05}s` : '0s',
+                animationFillMode: 'both'
+            }}
+        />
+    </div>));
     return (<div
         id="modal-scroll-container"
         style={{
@@ -96,9 +126,11 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
         }}
         onClick={handleOverlayClick}
     >
-        <div style={{
-            position: "sticky", top: '1rem', height: 0, zIndex: 10,
-        }}>
+        <div
+            style={{
+                position: "sticky", top: '1rem', height: 0, zIndex: 10,
+            }}
+        >
             <button
                 onClick={handleClose}
                 style={{
@@ -152,54 +184,11 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
                 {currentFocusIndex + 1} / {imageUrls.length}
             </div>
         </div>
-        <div
-            style={{
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'start'
-            }}
-        >
-            {imageUrls.map((imageUrl, index) => (<div
-                key={index}
-                data-image-index={index}
-                ref={(el) => {
-                    containerRefs.current[index] = el;
-                }}
-                style={{
-                    minHeight: '100vh',
-                    width: '100%',
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    scrollSnapAlign: 'start', // border: index === currentFocusIndex ? '2px solid rgba(255, 255, 255, 0.3)' : '2px solid transparent',
-                    transition: 'border-color 0.2s ease'
-                }}
-            >
-                <img
-                    src={imageUrl}
-                    alt={`Full size image ${index + 1}`}
-                    style={{
-                        maxWidth: '95vw',
-                        maxHeight: '90vh',
-                        width: 'auto',
-                        height: 'auto',
-                        objectFit: 'contain' as const,
-                        borderRadius: '0.5rem',
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                        opacity: index === currentFocusIndex ? 1 : 0.7,
-                        transition: 'opacity 0.2s ease',
-                        animationName: isAnimating ? 'scaleIn' : 'none',
-                        animationDuration: '0.2s',
-                        animationTimingFunction: 'ease-out',
-                        animationDelay: isAnimating ? `${index * 0.05}s` : '0s',
-                        animationFillMode: 'both'
-                    }}
-                />
-            </div>))}
-        </div>
+        <ListWithVirtualScroll
+            elements={elements}
+            visibleBuffer={5}
+            onIndexChange={onIndexChange} scrollMode={"container"}
+        />
         <style>{`
             @keyframes fadeIn {
               from {

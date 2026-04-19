@@ -1,10 +1,19 @@
 import type {JsonLdData, Post} from '../types/post';
 
+export const BASE_URL = import.meta.env.DEV ? "examplePostSource.html"
+    // "https://test-interface-20260412.blogspot.com"
+    : import.meta.env.VITE_API_URL;
 const parser = new DOMParser();
 
-export const gatherPosts = (html: string): Element[] => {
+export const gatherPosts = (html: string): { elements: Element[], nextUrl: string | null } => {
     const doc = parser.parseFromString(html, 'text/html');
-    return [...doc.querySelectorAll('.post-outer')];
+
+    const olderLink = doc.querySelector('.blog-pager-older-link') as HTMLAnchorElement
+
+    return {
+        elements: [...doc.querySelectorAll('.post-outer')], nextUrl: olderLink ? olderLink.href : null
+    }
+
 };
 
 export const parsePost = (postElement: Element): Post => {
@@ -60,7 +69,11 @@ const checkStatus = (response: Response): Promise<string> => {
 };
 
 
-export const loadPosts = (url: string): Promise<Post[]> => fetch(url)
+export const loadPosts = (url: string): Promise<{ newPosts: Post[], nextUrl: string | null }> => fetch(url)
     .then(checkStatus)
     .then(gatherPosts)
-    .then(posts => posts.map(parsePost))
+    .then(result => {
+        return {
+            nextUrl: result.nextUrl, newPosts: result.elements.map(parsePost)
+        }
+    })
