@@ -6,10 +6,12 @@ EXTRACT_LINE_START=8
 EXTRACT_LINE_END=9
 REPLACE_LINE_START=23
 REPLACE_LINE_END=24
+TO_REPLACE_ENV=62
 INPUT_FILE="dist/index.html"
 TEMPLATE_FILE="resources/template.html"
 OUTPUT_FILE="resources/toDeploy.html"
 ENV_FILE_PATH=".env"
+JSON_ENV_PATH='hiddenEnv.json'
 
 # API configuration
 API_ENDPOINT="https://draft.blogger.com/_/BloggerUi/data/batchexecute"
@@ -33,6 +35,25 @@ awk -v new_lines="$lines" "NR==${REPLACE_LINE_START} {print new_lines; next} NR=
 mv "$temp_file" "$OUTPUT_FILE"
 
 source "$ENV_FILE_PATH"
+
+# Replace line TO_REPLACE_ENV with content from JSON_ENV_PATH
+if [ -f "$JSON_ENV_PATH" ]; then
+    # Read content from JSON_ENV_PATH file
+    json_content=$(cat "$JSON_ENV_PATH")
+
+    # Create another temporary file for this replacement
+    temp_file2=$(mktemp)
+
+    # Replace the specific line with the JSON content
+    awk -v new_line="$json_content" "NR==${TO_REPLACE_ENV} {print new_line; next} 1" "$OUTPUT_FILE" > "$temp_file2"
+
+    # Move back to output file
+    mv "$temp_file2" "$OUTPUT_FILE"
+
+    echo "Line $TO_REPLACE_ENV replaced with content from $JSON_ENV_PATH"
+else
+    echo "Warning: $JSON_ENV_PATH not found, skipping line replacement"
+fi
 
 # Validate required environment variables
 if [ -z "$BLOG_ID" ] || [ -z "$AT_SECRET" ] || [ -z "$SECURE_1PSID" ]; then

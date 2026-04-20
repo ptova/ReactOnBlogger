@@ -1,11 +1,12 @@
-import type {JsonLdData, Post} from '../types/post';
+import type {FetchPostsFn, FetchPostsResult, Post} from '../types/Post.ts';
 
-export const BASE_URL = import.meta.env.DEV ? "examplePostSource.html"
-    // "https://test-interface-20260412.blogspot.com"
-    : import.meta.env.VITE_API_URL;
+interface JsonLdData {
+    datePublished?: string;
+}
+
 const parser = new DOMParser();
 
-export const gatherPosts = (html: string): { elements: Element[], nextUrl: string | null } => {
+const gatherPosts = (html: string): { elements: Element[], nextUrl: string | null } => {
     const doc = parser.parseFromString(html, 'text/html');
 
     const olderLink = doc.querySelector('.blog-pager-older-link') as HTMLAnchorElement
@@ -16,7 +17,7 @@ export const gatherPosts = (html: string): { elements: Element[], nextUrl: strin
 
 };
 
-export const parsePost = (postElement: Element): Post => {
+const parsePost = (postElement: Element): Post => {
     // Extract JSON-LD data from script tag
     const scriptTag = postElement.querySelector('script[type="application/ld+json"]');
     let jsonLdData: JsonLdData = {};
@@ -69,7 +70,7 @@ const checkStatus = (response: Response): Promise<string> => {
 };
 
 
-export const loadPosts = (url: string): Promise<{ newPosts: Post[], nextUrl: string | null }> => fetch(url)
+export const loadPosts: FetchPostsFn = (url: string): Promise<FetchPostsResult> => fetch(url)
     .then(checkStatus)
     .then(gatherPosts)
     .then(result => {

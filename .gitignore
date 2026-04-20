@@ -27,3 +27,4 @@ dist-ssr
 /public/examplePostSource.html
 /resources/postOuter.html
 /resources/samplePostsData.json
+/hiddenEnv.json
