@@ -1,4 +1,5 @@
 import type {FetchPostsFn, FetchPostsResult, Post} from '../types/Post.ts';
+import {MAIN_POST_SOURCE_URL} from "../shared/constants.ts";
 
 interface JsonLdData {
     datePublished?: string;
@@ -70,7 +71,7 @@ const checkStatus = (response: Response): Promise<string> => {
 };
 
 
-export const loadPosts: FetchPostsFn = (url: string): Promise<FetchPostsResult> => fetch(url)
+export const loadPosts: FetchPostsFn = (url: string|undefined): Promise<FetchPostsResult> => fetch(url === undefined ? MAIN_POST_SOURCE_URL : url)
     .then(checkStatus)
     .then(gatherPosts)
     .then(result => {

@@ -2,6 +2,8 @@ import type {FetchPostsFn, FetchPostsResult, Post} from '../types/Post.ts';
 import {BLOGGER_API_KEY, FOLLOWED_BLOG_IDS} from "../shared/constants.ts";
 
 const BLOGGER_API_ENDPOINT = 'https://www.googleapis.com/blogger/v3/blogs/';
+const weekInMillis = 7 * 24 * 60 * 60 * 1000;
+const maxResults = 10;
 
 interface BloggerPost {
     id: string;
@@ -22,8 +24,7 @@ interface BloggerResponse {
 
 // Cache for storing loaded posts across multiple loads
 let allPostsCache: Post[] = [];
-let currentPageToken: string | null = null;
-let currentStartIndex = 0;
+let latestRetrieved: string | null = null;
 
 const parseExternalPost = (bloggerPost: BloggerPost): Post => {
     return {
@@ -35,88 +36,92 @@ const parseExternalPost = (bloggerPost: BloggerPost): Post => {
     };
 };
 
-const fetchPostsFromBlogs = async (startDate?: string, pageToken?: string): Promise<BloggerPost[]> => {
+const fetchPostsFromSingleBlog = async (blogId: string, startDate: string, endDate: string, pageToken?: string): Promise<{
+    posts: BloggerPost[], nextPageToken?: string
+}> => {
     const params: Record<string, string | number> = {
-        key: BLOGGER_API_KEY, maxResults: 10
+        key: BLOGGER_API_KEY, maxResults: maxResults
     };
 
     if (startDate) {
         params.startDate = startDate;
     }
-
+    if (endDate) {
+        params.endDate = endDate;
+    }
     if (pageToken) {
         params.pageToken = pageToken;
     }
 
     const queryString = new URLSearchParams(params as Record<string, string>).toString();
 
-    const promises = FOLLOWED_BLOG_IDS.map(blogId => fetch(`${BLOGGER_API_ENDPOINT}${blogId}/posts?${queryString}`)
-        .then(res => res.json() as Promise<BloggerResponse>)
-        .then(json => json.items || [])
-        .catch(error => {
-            console.error(`Failed to fetch posts from blog ${blogId}:`, error);
-            return [];
-        }));
-
-    const results = await Promise.all(promises);
-    return results.flat();
+    try {
+        const response = await fetch(`${BLOGGER_API_ENDPOINT}${blogId}/posts?${queryString}`);
+        const json = await response.json() as BloggerResponse;
+        return {
+            posts: json.items || [], nextPageToken: json.nextPageToken
+        };
+    } catch (error) {
+        console.error(`Failed to fetch posts from blog ${blogId}:`, error);
+        return {posts: [], nextPageToken: undefined};
+    }
 };
 
-export const loadExternalPosts: FetchPostsFn = async (url: string): Promise<FetchPostsResult> => {
-    // Parse URL to get parameters
-    const urlObj = new URL(url);
-    const pageToken = urlObj.searchParams.get('pageToken');
-    const startDate = urlObj.searchParams.get('startDate');
+const fetchPostsForWeekRange = async (startDate: string, endDate: string): Promise<BloggerPost[]> => {
+    const allPosts: BloggerPost[] = [];
 
-    // If starting fresh or no cache, fetch new posts
-    if (!pageToken || pageToken === 'null') {
-        currentPageToken = null;
-        currentStartIndex = 0;
-        allPostsCache = [];
+    // For each blog, fetch posts with pagination
+    for (const blogId of FOLLOWED_BLOG_IDS) {
+        let pageToken: string | undefined = undefined;
+        let hasMorePages = true;
 
-        // Default to last 7 days if no start date specified
-        const defaultStartDate = startDate || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-        const newPosts = await fetchPostsFromBlogs(defaultStartDate, undefined);
+        while (hasMorePages) {
+            const result = await fetchPostsFromSingleBlog(blogId, startDate, endDate, pageToken);
+
+            if (result.posts.length === 0) {
+                hasMorePages = false;
+            } else {
+                allPosts.push(...result.posts);
+                pageToken = result.nextPageToken;
+                hasMorePages = !!result.nextPageToken;
+            }
+        }
+    }
+
+    return allPosts;
+};
+
+export const loadExternalPosts: FetchPostsFn = async (startDate: string | undefined): Promise<FetchPostsResult> => {
+    // Initialize on first call
+    if (startDate === undefined) {
+        // Start from current date going back 1 week
+        startDate = new Date(Date.now() - weekInMillis).toISOString();
+    }
+    if (allPostsCache && latestRetrieved && latestRetrieved < startDate) {
+        startDate = latestRetrieved
+        const nextStartDate = new Date(new Date(startDate).getTime() - weekInMillis).toISOString();
+        return {
+            newPosts: allPostsCache, nextUrl: nextStartDate
+        };
+    } else {
+        // Define the week range: from startDate to startDate + 1 week
+        const endDate = new Date(new Date(startDate).getTime() + weekInMillis).toISOString();
+
+        // Fetch all posts for this specific week range (with pagination)
+        const newPosts = await fetchPostsForWeekRange(startDate, endDate);
 
         // Sort by date published (newest first)
         newPosts.sort((a, b) => Date.parse(b.published) - Date.parse(a.published));
 
-        allPostsCache = newPosts.map(parseExternalPost);
-
-        // Get next page token from the first blog (simplified - in production you'd track per blog)
-        const nextToken = newPosts.length === 10 ? 'has_more' : null;
-
+        const newParsedPosts = newPosts.map(parseExternalPost);
+        allPostsCache = [...allPostsCache, ...newParsedPosts];
+        latestRetrieved = startDate
+        // Calculate next start date: go back another week (2 weeks from original startDate)
+        const nextStartDate = new Date(new Date(startDate).getTime() - weekInMillis).toISOString();
         return {
-            newPosts: allPostsCache.slice(0, 10),
-            nextUrl: nextToken ? `${window.location.origin}${window.location.pathname}?pageToken=${nextToken}&startDate=${defaultStartDate}` : null
-        };
-    } else {
-        // Load more posts - in a real implementation, you'd fetch the next batch
-        // For this example, we'll simulate loading more by slicing the cache
-        const start = currentStartIndex + 10;
-        const end = start + 10;
-
-        if (start >= allPostsCache.length) {
-            // Fetch more from API with next page token
-            const nextBatch = await fetchPostsFromBlogs(startDate || undefined, currentPageToken || undefined);
-            const newParsedPosts = nextBatch.map(parseExternalPost);
-            allPostsCache = [...allPostsCache, ...newParsedPosts];
-
-            const hasMore = nextBatch.length === 10;
-            const nextToken = hasMore ? 'has_more' : null;
-
-            return {
-                newPosts: newParsedPosts,
-                nextUrl: nextToken ? `${window.location.origin}${window.location.pathname}?pageToken=${nextToken}&startDate=${startDate}` : null
-            };
-        }
-
-        const newPosts = allPostsCache.slice(start, end);
-        const hasMore = end < allPostsCache.length;
-
-        return {
-            newPosts,
-            nextUrl: hasMore ? `${window.location.origin}${window.location.pathname}?pageToken=more&startDate=${startDate}` : null
+            newPosts: newParsedPosts, nextUrl: nextStartDate
         };
     }
-};
+
+
+}

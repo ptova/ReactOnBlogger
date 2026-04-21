@@ -5,7 +5,8 @@ let config: {
 if (import.meta.env.DEV) {
     // Only used in development
     config = (await import("../../hiddenEnv.json")).default;
-    config.MAIN_POST_SOURCE_URL = "examplePostSource.html"
+    config.MAIN_POST_SOURCE_URL = import.meta.env.VITE_MAIN_POST_SOURCE_URL || "examplePostSource.html"
+    config.BLOGGER_API_KEY = import.meta.env.VITE_BLOGGER_API_KEY
 } else {
     // Only used in production (injected into HTML)
     const element = document.querySelector("#HiddenEnv") as HTMLElement | null;

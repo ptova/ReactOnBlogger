@@ -10,4 +10,4 @@ export type FetchPostsResult = {
     newPosts: Post[]; nextUrl: string | null;
 };
 
-export type FetchPostsFn = (url: string) => Promise<FetchPostsResult>;
+export type FetchPostsFn = (url: string|undefined) => Promise<FetchPostsResult>;
