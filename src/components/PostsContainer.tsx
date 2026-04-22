@@ -9,6 +9,7 @@ import ImageModal from "./ImageModal.tsx";
 import {createPortal} from "react-dom";
 import {ScrollToTopButton} from "./ScrollToTopButton.tsx";
 import ListWithVirtualScroll from "./ListWithVirtualScroll.tsx";
+import {CollapsibleHeader} from "./CollapsibleHeader.tsx";
 
 type PostSource = 'internal' | 'external';
 
@@ -116,23 +117,10 @@ export default function PostsContainer() {
         <MemoizedPostCard key={post.id} post={post} onImageClick={setModalImageUrl}/>));
 
     return (<>
-        {/* Source selector radio buttons */}
-        <div className="rounded-xl top-0 z-10 bg-gray-900/95 backdrop-blur-sm p-4 border-b border-gray-800">
-            <div className="flex justify-center gap-4">
-                <button
-                    onClick={() => setPostSource('internal')}
-                    className={`px-6 py-3 rounded-lg border-2 transition-all duration-300 ${postSource === 'internal' ? 'border-purple-500 bg-purple-500/10 text-purple-300 shadow-lg shadow-purple-500/20' : 'border-gray-700 bg-gray-800/50 text-gray-400 hover:border-gray-600 hover:bg-gray-800/70 hover:text-gray-300'}`}
-                >
-                    📄 Internal Posts
-                </button>
-                <button
-                    onClick={() => setPostSource('external')}
-                    className={`px-6 py-3 rounded-lg border-2 transition-all duration-300 ${postSource === 'external' ? 'border-purple-500 bg-purple-500/10 text-purple-300 shadow-lg shadow-purple-500/20' : 'border-gray-700 bg-gray-800/50 text-gray-400 hover:border-gray-600 hover:bg-gray-800/70 hover:text-gray-300'}`}
-                >
-                    🌐 External Posts
-                </button>
-            </div>
-        </div>
+        <CollapsibleHeader
+            postSource={postSource}
+            onSourceChange={setPostSource}
+        />
 
         <ListWithVirtualScroll
             elements={elements}

@@ -66,29 +66,40 @@ const fetchPostsFromSingleBlog = async (blogId: string, startDate: string, endDa
         return {posts: [], nextPageToken: undefined};
     }
 };
+const fetchAllPagesForBlog = async (
+    blogId: string,
+    startDate: string,
+    endDate: string
+): Promise<BloggerPost[]> => {
+    const posts: BloggerPost[] = [];
+    let pageToken: string | undefined = undefined;
 
-const fetchPostsForWeekRange = async (startDate: string, endDate: string): Promise<BloggerPost[]> => {
-    const allPosts: BloggerPost[] = [];
+    while (true) {
+        const result = await fetchPostsFromSingleBlog(blogId, startDate, endDate, pageToken);
 
-    // For each blog, fetch posts with pagination
-    for (const blogId of FOLLOWED_BLOG_IDS) {
-        let pageToken: string | undefined = undefined;
-        let hasMorePages = true;
+        if (!result.posts.length) break;
 
-        while (hasMorePages) {
-            const result = await fetchPostsFromSingleBlog(blogId, startDate, endDate, pageToken);
+        posts.push(...result.posts);
 
-            if (result.posts.length === 0) {
-                hasMorePages = false;
-            } else {
-                allPosts.push(...result.posts);
-                pageToken = result.nextPageToken;
-                hasMorePages = !!result.nextPageToken;
-            }
-        }
+        if (!result.nextPageToken) break;
+        pageToken = result.nextPageToken;
     }
 
-    return allPosts;
+    return posts;
+};
+
+const fetchPostsForWeekRange = async (
+    startDate: string,
+    endDate: string
+): Promise<BloggerPost[]> => {
+
+    const blogPromises = FOLLOWED_BLOG_IDS.map(blogId =>
+        fetchAllPagesForBlog(blogId, startDate, endDate)
+    );
+
+    const results = await Promise.all(blogPromises);
+
+    return results.flat();
 };
 
 export const loadExternalPosts: FetchPostsFn = async (startDate: string | undefined): Promise<FetchPostsResult> => {

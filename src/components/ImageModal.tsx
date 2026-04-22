@@ -8,6 +8,41 @@ interface ImageModalProps {
     onClose: () => void;
 }
 
+/**
+ * Preprocesses a URL if it matches the blogger.googleusercontent.com/img pattern
+ * and has an image extension. Removes the last two path segments.
+ *
+ * @param url - The URL to preprocess
+ * @returns The preprocessed URL, or the original URL if it doesn't match the pattern
+ */
+function preprocessBloggerImageUrl(url: string): string {
+    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg|ico)$/i;
+
+    try {
+        const urlObj = new URL(url);
+
+        // Check if hostname contains blogger.googleusercontent.com and path includes /img/
+        if (urlObj.hostname.includes('blogger.googleusercontent.com') && urlObj.pathname.includes('/img/')) {
+
+            // Split pathname by '/', filter out empty segments
+            const segments = urlObj.pathname.split('/').filter(segment => segment.length > 0);
+
+            // Check if URL ends with an image extension
+            const lastSegment = segments[segments.length - 1];
+            if (imageExtensions.test(lastSegment)) {
+                // Remove last two segments
+                const newSegments = segments.slice(0, -2);
+                urlObj.pathname = '/' + newSegments.join('/');
+                return urlObj.toString();
+            }
+        }
+    } catch (error) {
+        // If URL parsing fails, return original URL
+        console.warn('Failed to parse URL:', url, error);
+    }
+
+    return url;
+}
 
 export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps) {
     const [isAnimating, setIsAnimating] = useState(false);
@@ -75,44 +110,48 @@ export default function ImageModal({imageUrls, isOpen, onClose}: ImageModalProps
     };
     const onIndexChange = (newIndex: number) => setCurrentFocusIndex(newIndex)
 
-    const elements = imageUrls.map((imageUrl, index) => (<div
-        key={index}
-        data-image-index={index}
-        ref={(el) => {
-            containerRefs.current[index] = el;
-        }}
-        style={{
-            minHeight: '95vh',
-            width: '100%',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            scrollSnapAlign: 'start', // border: index === currentFocusIndex ? '2px solid rgba(255, 255, 255, 0.3)' : '2px solid transparent',
-            transition: 'border-color 0.2s ease'
-        }}
-    >
-        <img
-            src={imageUrl}
-            alt={`Full size image ${index + 1}`}
-            style={{
-                maxWidth: '95vw',
-                maxHeight: '90vh',
-                width: 'auto',
-                height: 'auto',
-                objectFit: 'contain' as const,
-                borderRadius: '0.5rem',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                opacity: index === currentFocusIndex ? 1 : 0.7,
-                transition: 'opacity 0.2s ease',
-                animationName: isAnimating ? 'scaleIn' : 'none',
-                animationDuration: '0.2s',
-                animationTimingFunction: 'ease-out',
-                animationDelay: isAnimating ? `${index * 0.05}s` : '0s',
-                animationFillMode: 'both'
+    const elements = imageUrls.map((imageUrl, index) => {
+        const processedUrl = preprocessBloggerImageUrl(imageUrl);
+
+        return (<div
+            key={index}
+            data-image-index={index}
+            ref={(el) => {
+                containerRefs.current[index] = el;
             }}
-        />
-    </div>));
+            style={{
+                minHeight: '95vh',
+                width: '100%',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                scrollSnapAlign: 'start', // border: index === currentFocusIndex ? '2px solid rgba(255, 255, 255, 0.3)' : '2px solid transparent',
+                transition: 'border-color 0.2s ease'
+            }}
+        >
+            <img
+                src={processedUrl}
+                alt={`Full size image ${index + 1}`}
+                style={{
+                    maxWidth: '95vw',
+                    maxHeight: '90vh',
+                    width: 'auto',
+                    height: 'auto',
+                    objectFit: 'contain' as const,
+                    borderRadius: '0.5rem',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                    opacity: index === currentFocusIndex ? 1 : 0.7,
+                    transition: 'opacity 0.2s ease',
+                    animationName: isAnimating ? 'scaleIn' : 'none',
+                    animationDuration: '0.2s',
+                    animationTimingFunction: 'ease-out',
+                    animationDelay: isAnimating ? `${index * 0.05}s` : '0s',
+                    animationFillMode: 'both'
+                }}
+            />
+        </div>)
+    });
     return (<div
         id="modal-scroll-container"
         style={{
