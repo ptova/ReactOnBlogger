@@ -9,7 +9,7 @@ import ImageModal from "./ImageModal.tsx";
 import {createPortal} from "react-dom";
 import {ScrollToTopButton} from "./ScrollToTopButton.tsx";
 import ListWithVirtualScroll from "./ListWithVirtualScroll.tsx";
-import {CollapsibleHeader} from "./CollapsibleHeader.tsx";
+import {useParams} from "react-router-dom";
 
 type PostSource = 'internal' | 'external';
 
@@ -33,7 +33,11 @@ type Action = | { type: 'RESET_SOURCE'; payload: PostSource } | {
 
 // Initial state
 const initialState: State = {
-    posts: [], nextUrl: undefined, error: null, currentFocusIndex: 0, loading: false,
+    posts:             [],
+    nextUrl:           undefined,
+    error:             null,
+    currentFocusIndex: 0,
+    loading:           false,
 };
 
 // Reducer function - remove SET_MODAL_IMAGE_URL case
@@ -41,23 +45,33 @@ function postsReducer(state: State, action: Action): State {
     switch (action.type) {
         case 'RESET_SOURCE':
             return {
-                ...state, posts: [], nextUrl: undefined, error: null, currentFocusIndex: 0, loading: false,
+                ...state,
+                posts:             [],
+                nextUrl:           undefined,
+                error:             null,
+                currentFocusIndex: 0,
+                loading:           false,
             };
         case 'ADD_POSTS':
             return {
-                ...state, posts: [...state.posts, ...action.payload.newPosts], nextUrl: action.payload.nextUrl,
+                ...state,
+                posts:   [...state.posts, ...action.payload.newPosts],
+                nextUrl: action.payload.nextUrl,
             };
         case 'SET_ERROR':
             return {
-                ...state, error: action.payload,
+                ...state,
+                error: action.payload,
             };
         case 'SET_CURRENT_FOCUS_INDEX':
             return {
-                ...state, currentFocusIndex: action.payload,
+                ...state,
+                currentFocusIndex: action.payload,
             };
         case 'SET_LOADING':
             return {
-                ...state, loading: action.payload,
+                ...state,
+                loading: action.payload,
             };
         default:
             return state;
@@ -65,9 +79,17 @@ function postsReducer(state: State, action: Action): State {
 }
 
 export default function PostsContainer() {
+    const params = useParams();
+    const postSource: PostSource = (() => {
+        switch (params.sourceType) {
+            case 'external':
+                return 'external';
+            default:
+                return 'internal';
+        }
+    })();
     const [state, dispatch] = useReducer(postsReducer, initialState);
     const [modalImageUrl, setModalImageUrl] = useState<string[] | null>(null);
-    const [postSource, setPostSource] = useState<PostSource>('internal');
     const loadTriggeredRef = useRef(false);
 
     // Get the appropriate load function based on selected source
@@ -77,21 +99,39 @@ export default function PostsContainer() {
 
     // Reset state when source changes - now a single dispatch
     useEffect(() => {
-        dispatch({type: 'RESET_SOURCE', payload: postSource});
+        dispatch({
+            type:    'RESET_SOURCE',
+            payload: postSource
+        });
     }, [postSource]);
 
     const loadMorePosts = useCallback(async (nextUrl: string | undefined) => {
-        dispatch({type: 'SET_LOADING', payload: true});
+        dispatch({
+            type:    'SET_LOADING',
+            payload: true
+        });
         try {
             const loadPostsFunction = getLoadPostsFunction();
             const res = await loadPostsFunction(nextUrl);
             const newPosts = res.newPosts;
-            dispatch({type: 'ADD_POSTS', payload: {newPosts, nextUrl: res.nextUrl}});
+            dispatch({
+                type:    'ADD_POSTS',
+                payload: {
+                    newPosts,
+                    nextUrl: res.nextUrl
+                }
+            });
         } catch (err) {
-            dispatch({type: 'SET_ERROR', payload: err instanceof Error ? err.message : 'An error occurred'});
+            dispatch({
+                type:    'SET_ERROR',
+                payload: err instanceof Error ? err.message : 'An error occurred'
+            });
             console.error('Failed to load more posts:', err);
         } finally {
-            dispatch({type: 'SET_LOADING', payload: false});
+            dispatch({
+                type:    'SET_LOADING',
+                payload: false
+            });
         }
     }, [getLoadPostsFunction]);
 
@@ -110,18 +150,16 @@ export default function PostsContainer() {
     }, [state.currentFocusIndex, state.posts.length, state.loading, loadMorePosts, state.nextUrl, state.error]);
 
     const onIndexChange = (newIndex: number) => {
-        dispatch({type: 'SET_CURRENT_FOCUS_INDEX', payload: newIndex});
+        dispatch({
+            type:    'SET_CURRENT_FOCUS_INDEX',
+            payload: newIndex
+        });
     };
 
     const elements = state.posts.map((post) => (
         <MemoizedPostCard key={post.id} post={post} onImageClick={setModalImageUrl}/>));
 
     return (<>
-        <CollapsibleHeader
-            postSource={postSource}
-            onSourceChange={setPostSource}
-        />
-
         <ListWithVirtualScroll
             elements={elements}
             visibleBuffer={5}

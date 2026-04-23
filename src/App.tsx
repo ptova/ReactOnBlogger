@@ -1,33 +1,32 @@
+import {BrowserRouter, Route, Routes} from 'react-router-dom';
 import PostsContainer from './components/PostsContainer';
-
-// ===== STYLE CONSTANTS =====
-
-// Root container (full page background)
-const appContainerStyles = ['min-h-screen', 'bg-gradient-to-br', 'from-purple-500', 'to-indigo-600'].join(' ');
-
-// Inner wrapper
-const wrapperStyles = ['max-w-6xl', 'mx-auto', 'px-4', 'sm:px-5', 'py-5', 'sm:py-6'].join(' ');
-
-// Header styles
-const headerStyles = ['text-center', 'text-white', 'py-8', 'sm:py-10', 'mb-6', 'sm:mb-10'].join(' ');
-
-// Title styles
-const headerTitleStyles = ['text-3xl', 'sm:text-4xl', 'md:text-5xl', 'font-bold', 'mb-2', 'sm:mb-3', 'drop-shadow-lg'].join(' ');
+import {CollapsibleHeader} from "./components/CollapsibleHeader";
+import {NavBar} from "./components/NavBar.tsx";
 
 function App() {
-    return (
-        <div className={appContainerStyles}>
-            <div className={wrapperStyles}>
-                <header className={headerStyles}>
-                    <h1 className={headerTitleStyles}>
-                        REACT On Blogger
-                    </h1>
-                </header>
 
-                <PostsContainer />
+    return (<BrowserRouter>
+        <div style={{
+            minHeight:  '100vh',
+            background: 'linear-gradient(to bottom right, #a855f7, #4f46e5)'
+        }}>
+            <div style={{
+                maxWidth: '72rem',
+                margin:   '0 auto',
+                padding:  '0 1rem'
+            }}>
+                <CollapsibleHeader>
+                    <NavBar></NavBar>
+                </CollapsibleHeader>
+                <Routes>
+                    <Route path="/" element={<PostsContainer/>}/>
+                    <Route path="/source/:sourceType" element={<PostsContainer/>}/>
+
+                    <Route path="/source/:sourceType" element={<PostsContainer/>}/>
+                </Routes>
             </div>
         </div>
-    );
+    </BrowserRouter>);
 }
 
 export default App;
