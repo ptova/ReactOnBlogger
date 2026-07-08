@@ -1,60 +1,63 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
-export function CollapsibleHeader({children}: { children: React.ReactNode }) {
-    const [isCollapsed, setIsCollapsed] = useState(false);
+/**
+ * A sticky header that collapses (hides its children) when the user scrolls down
+ * past 50 px and expands when they scroll back up.
+ *
+ * Uses direct DOM manipulation via a ref to skip React re-renders on every
+ * scroll frame, relying on `requestAnimationFrame` for smoothness.
+ */
+export function CollapsibleHeader({ children }: { children: React.ReactNode }) {
     const lastScrollY = useRef(0);
     const ticking = useRef(false);
+    const isCollapsed = useRef(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
     const handleScroll = useCallback(() => {
-        if (ticking.current) {
-            return;
-        }
+        if (ticking.current) return;
         requestAnimationFrame(() => {
             const currentScrollY = window.scrollY;
+            const shouldCollapse = currentScrollY > 50 && currentScrollY > lastScrollY.current;
 
-            // Compress when scrolling down past 50px
-            if (currentScrollY > 50 && currentScrollY > lastScrollY.current) {
-
-                setIsCollapsed(true);
-            }
-            // Expand when scrolling up
-            else if (currentScrollY < lastScrollY.current) {
-                setIsCollapsed(false);
+            if (shouldCollapse !== isCollapsed.current) {
+                isCollapsed.current = shouldCollapse;
+                const el = containerRef.current;
+                if (el) {
+                    el.style.height = shouldCollapse ? '0' : '';
+                    el.style.paddingTop = shouldCollapse ? '0' : '';
+                    el.style.paddingBottom = shouldCollapse ? '0' : '';
+                    el.style.opacity = shouldCollapse ? '0' : '1';
+                }
             }
 
             lastScrollY.current = currentScrollY;
             ticking.current = false;
         });
         ticking.current = true;
-    }, [])
+    }, []);
+
     useEffect(() => {
-        window.removeEventListener('scroll', handleScroll)
-        setTimeout(() => window.addEventListener('scroll', handleScroll, {passive: true}), 400)
-    }, [handleScroll, isCollapsed]);
-    useEffect(() => {
-        window.addEventListener('scroll', handleScroll, {passive: true});
+        window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, [handleScroll]);
 
-
-    return (<div style={{
-        position:   'sticky',
-        top:        0,
-        zIndex:     10,
-        height:     50,
-        transition: 'all 200ms ease-in-out'
-    }}>
+    return (
         <div style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+            height: 50,
             transition: 'all 200ms ease-in-out',
-            overflow:   'hidden', ...(isCollapsed ? {
-                height:        0,
-                paddingTop:    0,
-                paddingBottom: 0,
-                opacity:       0
-            } : {
-                height: 'auto'
-            })
         }}>
-            {children}
+            <div
+                ref={containerRef}
+                style={{
+                    transition: 'all 200ms ease-in-out',
+                    overflow: 'hidden',
+                }}
+            >
+                {children}
+            </div>
         </div>
-    </div>);
+    );
 }
