@@ -2,10 +2,11 @@
 export interface Config {
     /** URL or path to the internal Blogger HTML page to scrape. */
     MAIN_POST_SOURCE_URL: string;
-    /** Google API key for the Blogger v3 API. */
-    BLOGGER_API_KEY: string | undefined;
-    /** Blogger blog IDs to follow when using the external API. */
-    FOLLOWED_BLOG_IDS: string[];
+    /**
+     * URL of the deployed Apps Script web app that proxies the Blogger API.
+     * Only needed if the external post source is used.
+     */
+    APPS_SCRIPT_URL: string;
 }
 
 let cachedConfig: Config | null = null;
@@ -20,10 +21,11 @@ let cachedConfig: Config | null = null;
 async function loadConfig(): Promise<Config> {
     if (import.meta.env.DEV) {
         const hiddenConfig = await import('../../hiddenEnv.json');
+        const envAppsScript = import.meta.env.VITE_APPS_SCRIPT_URL;
+        const fileAppsScript = (hiddenConfig.default as unknown as Record<string, string>)['APPS_SCRIPT_URL'];
         return {
             MAIN_POST_SOURCE_URL: import.meta.env.VITE_MAIN_POST_SOURCE_URL || 'examplePostSource.html',
-            BLOGGER_API_KEY: import.meta.env.VITE_BLOGGER_API_KEY,
-            FOLLOWED_BLOG_IDS: hiddenConfig.default.FOLLOWED_BLOG_IDS ?? [],
+            APPS_SCRIPT_URL: envAppsScript || fileAppsScript || '',
         };
     }
 
@@ -32,8 +34,7 @@ async function loadConfig(): Promise<Config> {
     const parsed: Partial<Config> = raw ? JSON.parse(raw) : {};
     return {
         MAIN_POST_SOURCE_URL: parsed.MAIN_POST_SOURCE_URL ?? '',
-        BLOGGER_API_KEY: parsed.BLOGGER_API_KEY,
-        FOLLOWED_BLOG_IDS: parsed.FOLLOWED_BLOG_IDS ?? [],
+        APPS_SCRIPT_URL: parsed.APPS_SCRIPT_URL ?? '',
     };
 }
 

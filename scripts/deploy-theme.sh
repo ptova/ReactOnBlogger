@@ -56,8 +56,8 @@ else
 fi
 
 # Validate required environment variables
-if [ -z "$BLOG_ID" ] || [ -z "$AT_SECRET" ] || [ -z "$SECURE_1PSID" ]; then
-    echo "Error: BLOG_ID, AT_SECRET, and SECURE_1PSID must be set in .env file"
+if [ -z "$BLOG_ID" ] || [ -z "$AT_SECRET" ] || [ -z "$COOKIE_1PSID" ]; then
+    echo "Error: BLOG_ID, AT_SECRET, and COOKIE_1PSID must be set in .env file"
     exit 1
 fi
 
@@ -83,7 +83,7 @@ AT_ENCODED=$(printf '%s' "$AT_SECRET" | jq -sRr @uri)
 
 # Execute curl and save output to a temporary file
 RESPONSE=$(curl -s "$API_ENDPOINT" \
-  -b "${COOKIE_NAME}=${SECURE_1PSID}" \
+  -b "${COOKIE_NAME}=${COOKIE_1PSID}" \
   -H "user-agent: ${USER_AGENT}" \
   --data-raw "f.req=${F_REQ_JSON}&at=${AT_ENCODED}" | tail -n +${TAIL_SKIP_LINES})
 
