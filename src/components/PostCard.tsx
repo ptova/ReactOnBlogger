@@ -1,5 +1,5 @@
 import type { Post } from '../types/Post';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { extractImageUrlsFromHtml } from '../shared/contentUtils';
 
 interface PostCardProps {
@@ -12,8 +12,10 @@ const articleStyles = ['h-[95vh]', 'bg-gray-900', 'rounded-xl', 'p-4', 'sm:p-6',
 const titleStyles = ['text-gray-100', 'text-xl', 'sm:text-2xl', 'md:text-3xl', 'font-bold', 'mb-3', 'sm:mb-4', 'leading-tight', 'truncate', 'max-w-full'].join(' ');
 const metaContainerStyles = ['mb-4', 'sm:mb-5', 'pb-3', 'sm:pb-4', 'border-b-2', 'border-gray-800'].join(' ');
 const dateStyles = ['text-gray-400', 'text-sm', 'block', 'mb-3'].join(' ');
+const labelsWrapperStyles = ['overflow-hidden', 'transition-all', 'duration-300', 'ease-in-out', 'relative'].join(' ');
 const labelsContainerStyles = ['flex', 'gap-2', 'flex-wrap', 'justify-evenly'].join(' ');
-const labelStyles = ['bg-gradient-to-r', 'from-purple-500', 'to-indigo-600', 'text-white', 'px-3', 'py-1', 'rounded-full', 'text-xs', 'sm:text-sm', 'font-medium'].join(' ');
+const labelsContainerSingleStyles = ['flex', 'gap-2', 'flex-nowrap', 'justify-evenly'].join(' ');
+const labelStyles = ['bg-gradient-to-r', 'from-purple-500', 'to-indigo-600', 'text-white', 'px-3', 'py-1', 'rounded-full', 'text-xs', 'sm:text-sm', 'font-medium', 'whitespace-nowrap'].join(' ');
 const separatorStyles = ['[&_.separator]:!p-0'].join(' ');
 const imageStyles = ['[&_img]:!max-w-[100%]', '[&_img]:!max-h-[60vh]', '[&_iframe]:!min-h-[60vh]', '[&_img]:!w-auto', '[&_img]:!h-auto', '[&_img]:!rounded-lg', '[&_img]:!my-4'].join(' ');
 const videoStyles = ['[&_iframe]:!max-w-[100%]', '[&_iframe]:!max-h-[60vh]', '[&_iframe]:!min-h-[60vh]', '[&_iframe]:!rounded-lg'].join(' ');
@@ -25,6 +27,14 @@ const proseContentStyles = ['prose-content', 'text-gray-300', 'leading-relaxed',
 /** Displays a single blog post as a full-viewport card with title, metadata, and rendered HTML content. */
 export function PostCard({ post, onImageClick }: PostCardProps) {
     const contentRef = useRef<HTMLDivElement>(null);
+    const [hoveringLabels, setHoveringLabels] = useState(false);
+    const labelsRef = useRef<HTMLDivElement>(null);
+    const [overflows, setOverflows] = useState(false);
+
+    useEffect(() => {
+        const el = labelsRef.current;
+        if (el) setOverflows(el.scrollWidth > el.clientWidth);
+    }, [post.labels]);
 
     /**
      * Delegated click listener on the content container.
@@ -61,10 +71,26 @@ export function PostCard({ post, onImageClick }: PostCardProps) {
                         year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
                     })}
                 </span>
-                <div className={labelsContainerStyles}>
-                    {post.labels.map((label, index) => (
-                        <span key={index} className={labelStyles}>{label}</span>
-                    ))}
+                <div
+                    className={labelsWrapperStyles}
+                    style={{ maxHeight: hoveringLabels ? (post.labels.length * 2 + 1) + 'rem' : '2rem' }}
+                    onMouseEnter={() => setHoveringLabels(true)}
+                    onMouseLeave={() => setHoveringLabels(false)}
+                >
+                    <div ref={labelsRef} className={hoveringLabels ? labelsContainerStyles : labelsContainerSingleStyles}>
+                        {post.labels.map((label, index) => (
+                            <span key={index} className={labelStyles}>{label}</span>
+                        ))}
+                    </div>
+                    {overflows && !hoveringLabels && (
+                        <div style={{
+                            position: 'absolute', right: 0, top: 0,
+                            background: 'linear-gradient(to left, #111827, transparent)',
+                            paddingLeft: '2rem', height: '100%', display: 'flex', alignItems: 'center',
+                        }}>
+                            <span className={labelStyles}>+{post.labels.length - 1}</span>
+                        </div>
+                    )}
                 </div>
             </div>
 

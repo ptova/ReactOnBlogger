@@ -4,29 +4,61 @@ import { ListWithVirtualScroll } from './ListWithVirtualScroll';
 import { preprocessBloggerImageUrl } from '../shared/imageUtils';
 
 interface ImageModalProps {
-    /** Image URLs to display as a swipeable gallery. */
     imageUrls: string[];
-    /** Whether the modal is visible. */
     isOpen: boolean;
-    /** Called when the modal requests to close. */
     onClose: () => void;
 }
 
-/**
- * Full-screen image gallery modal.
- *
- * - Pushes a `history` entry so the browser back button closes the modal.
- * - Uses container-mode virtual scrolling for smooth swiping through images.
- * - Preprocesses Blogger image URLs for full resolution.
- * - Animates entrance with a staggered scale-in effect.
- */
+function ImagePlaceholder({ size }: { size: number }) {
+    return (
+        <div
+            style={{
+                width: size,
+                height: size,
+                border: '4px solid rgba(255, 255, 255, 0.15)',
+                borderTopColor: 'white',
+                borderRadius: '50%',
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                animation: 'imgSpin 0.8s linear infinite',
+                opacity: 0.6,
+            }}
+        />
+    );
+}
+
+function ImageWithPlaceholder({ src, alt }: { src: string; alt: string }) {
+    const [loaded, setLoaded] = useState<Record<string, boolean>>({});
+    const isLoaded = loaded[src];
+
+    return (
+        <>
+            {!isLoaded && <ImagePlaceholder size={48} />}
+            <img
+                src={src}
+                alt={alt}
+                onLoad={() => setLoaded((prev) => ({ ...prev, [src]: true }))}
+                style={{
+                    maxWidth: '95vw',
+                    maxHeight: '90vh',
+                    width: isLoaded ? 'auto' : 0,
+                    height: isLoaded ? 'auto' : 0,
+                    objectFit: 'contain',
+                    borderRadius: '0.5rem',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                    visibility: 'visible',
+                }}
+            />
+        </>
+    );
+}
+
 export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
-    const [isAnimating, setIsAnimating] = useState(false);
     const [currentFocusIndex, setCurrentFocusIndex] = useState(0);
-    const containerRefs = useRef<(HTMLDivElement | null)[]>([]);
     const hasPushedRef = useRef(false);
 
-    /** Push a history entry when the modal opens so back-button works. */
     useEffect(() => {
         if (isOpen && !hasPushedRef.current) {
             history.pushState({ modal: true }, '');
@@ -34,7 +66,6 @@ export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
         }
     }, [isOpen]);
 
-    /** Pop the history entry on popstate (back button). */
     useEffect(() => {
         const handlePopState = () => {
             if (hasPushedRef.current) {
@@ -48,13 +79,12 @@ export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
 
     const handleClose = useCallback(() => {
         if (history.state?.modal) {
-            history.back(); // triggers popstate -> onClose
+            history.back();
         } else {
             onClose();
         }
     }, [onClose]);
 
-    /** Body scroll lock and Escape key handler, plus animation sequencing. */
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape' && isOpen) {
@@ -65,12 +95,9 @@ export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
             window.addEventListener('keydown', handleKeyDown);
-            Promise.resolve().then(() => setIsAnimating(true));
         } else {
             document.body.style.overflow = 'unset';
             window.removeEventListener('keydown', handleKeyDown);
-            Promise.resolve().then(() => setIsAnimating(false));
-            Promise.resolve().then(() => setCurrentFocusIndex(0));
         }
 
         return () => {
@@ -95,37 +122,20 @@ export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
             <div
                 key={index}
                 data-image-index={index}
-                ref={(el) => { containerRefs.current[index] = el; }}
                 style={{
                     minHeight: '95vh',
                     width: '100%',
+                    position: 'relative',
                     flexShrink: 0,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     scrollSnapAlign: 'start',
-                    transition: 'border-color 0.2s ease',
                 }}
             >
-                <img
+                <ImageWithPlaceholder
                     src={processedUrl}
                     alt={`Full size image ${index + 1}`}
-                    style={{
-                        maxWidth: '95vw',
-                        maxHeight: '90vh',
-                        width: 'auto',
-                        height: 'auto',
-                        objectFit: 'contain',
-                        borderRadius: '0.5rem',
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                        opacity: index === currentFocusIndex ? 1 : 0.7,
-                        transition: 'opacity 0.2s ease',
-                        animationName: isAnimating ? 'scaleIn' : 'none',
-                        animationDuration: '0.2s',
-                        animationTimingFunction: 'ease-out',
-                        animationDelay: isAnimating ? `${index * 0.05}s` : '0s',
-                        animationFillMode: 'both',
-                    }}
                 />
             </div>
         );
@@ -141,7 +151,6 @@ export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
                 zIndex: 50,
                 backdropFilter: 'blur(4px)',
                 overflowY: 'auto',
-                animation: isAnimating ? 'fadeIn 0.2s ease-out' : 'none',
             }}
             onClick={handleOverlayClick}
         >
@@ -191,13 +200,8 @@ export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
                 scrollMode="container"
             />
             <style>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes scaleIn {
-                    from { transform: scale(0.95); opacity: 0; }
-                    to { transform: scale(1); opacity: 1; }
+                @keyframes imgSpin {
+                    to { transform: translate(-50%, -50%) rotate(360deg); }
                 }
             `}</style>
         </div>
