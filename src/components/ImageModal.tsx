@@ -4,11 +4,18 @@ import { ListWithVirtualScroll } from './ListWithVirtualScroll';
 import { preprocessBloggerImageUrl } from '../shared/imageUtils';
 
 interface ImageModalProps {
+    /** All image URLs from the post that was clicked. */
     imageUrls: string[];
+    /** Whether the modal is currently visible. */
     isOpen: boolean;
+    /** Called to dismiss the modal (clears the parent's modalImageUrl state). */
     onClose: () => void;
 }
 
+/**
+ * Loading spinner displayed while an image is being fetched.
+ * Uses a CSS animation (defined at the bottom of ImageModal) for rotation.
+ */
 function ImagePlaceholder({ size }: { size: number }) {
     return (
         <div
@@ -29,6 +36,11 @@ function ImagePlaceholder({ size }: { size: number }) {
     );
 }
 
+/**
+ * Image wrapper that shows a loading placeholder until the <img> fires onLoad.
+ * Tracks loaded state per-URL so multiple images in the gallery don't conflict.
+ * Dimensions start at 0 and expand on load to prevent layout shift.
+ */
 function ImageWithPlaceholder({ src, alt }: { src: string; alt: string }) {
     const [loaded, setLoaded] = useState<Record<string, boolean>>({});
     const isLoaded = loaded[src];
@@ -55,10 +67,28 @@ function ImageWithPlaceholder({ src, alt }: { src: string; alt: string }) {
     );
 }
 
+/**
+ * Full-screen image gallery modal.
+ *
+ * Architecture:
+ * - Rendered via createPortal (in PostsContainer) into document.body, so it
+ *   escapes the sticky header and layout constraints.
+ * - Uses ListWithVirtualScroll in "container" mode to virtualise the image
+ *   list, only rendering images near the current scroll position.
+ * - Manages browser history so the Back button closes the modal instead of
+ *   navigating away. On open, pushes a history entry; on close, calls
+ *   history.back() or lets the popstate listener handle it.
+ * - Locks body scrolling (overflow: hidden) while open.
+ */
 export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
     const [currentFocusIndex, setCurrentFocusIndex] = useState(0);
+    /**
+     * Tracks whether we've pushed a history entry for this modal session.
+     * Prevents pushing duplicate entries if the component re-renders while open.
+     */
     const hasPushedRef = useRef(false);
 
+    // Push a history entry when the modal opens, so the Back button can close it.
     useEffect(() => {
         if (isOpen && !hasPushedRef.current) {
             history.pushState({ modal: true }, '');
@@ -66,6 +96,7 @@ export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
         }
     }, [isOpen]);
 
+    // When the user presses Back (popstate), close the modal instead of navigating.
     useEffect(() => {
         const handlePopState = () => {
             if (hasPushedRef.current) {
@@ -78,6 +109,8 @@ export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
     }, [onClose]);
 
     const handleClose = useCallback(() => {
+        // If we pushed a history entry, go back to trigger the popstate listener
+        // above, which calls onClose. Otherwise, close directly.
         if (history.state?.modal) {
             history.back();
         } else {
@@ -85,6 +118,7 @@ export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
         }
     }, [onClose]);
 
+    // Handle Escape key and body scroll lock.
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape' && isOpen) {
@@ -108,6 +142,7 @@ export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
 
     if (!isOpen) return null;
 
+    // Close when clicking the dark overlay (but not when clicking an image).
     const handleOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
         if (event.target === event.currentTarget) {
             onClose();
@@ -116,6 +151,8 @@ export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
 
     const onIndexChange = (newIndex: number) => setCurrentFocusIndex(newIndex);
 
+    // Build gallery elements: each image is a full-viewport-height slide.
+    // URLs are preprocessed to strip Blogger thumbnail sizing for full-res.
     const elements = imageUrls.map((imageUrl, index) => {
         const processedUrl = preprocessBloggerImageUrl(imageUrl);
         return (
@@ -154,6 +191,12 @@ export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
             }}
             onClick={handleOverlayClick}
         >
+            {/*
+              Sticky top bar with close button and page counter.
+              Position: sticky so it stays visible while scrolling images.
+              The height:0 + absolute positioning trick keeps the bar
+              floating without affecting the virtual scroll layout.
+            */}
             <div style={{ position: 'sticky', top: '1rem', height: 0, zIndex: 10 }}>
                 <button
                     onClick={handleClose}
@@ -199,6 +242,8 @@ export function ImageModal({ imageUrls, isOpen, onClose }: ImageModalProps) {
                 onIndexChange={onIndexChange}
                 scrollMode="container"
             />
+            {/* CSS animation for the loading spinner – defined here to keep
+                it co-located with the component that uses it. */}
             <style>{`
                 @keyframes imgSpin {
                     to { transform: translate(-50%, -50%) rotate(360deg); }

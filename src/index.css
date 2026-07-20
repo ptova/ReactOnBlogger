@@ -1,3 +1,14 @@
+/**
+ * Global styles and design tokens.
+ *
+ * Tailwind directives are injected first so that utility classes take
+ * precedence over the custom properties defined below.
+ *
+ * Design tokens (--text, --bg, --accent, etc.) follow a CSS custom
+ * property pattern so they can be overridden per-theme. Dark-mode
+ * values are applied via `prefers-color-scheme` media query.
+ */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -33,6 +44,7 @@
     }
 }
 
+/* Dark-mode overrides: activated when the OS/browser reports a dark preference. */
 @media (prefers-color-scheme: dark) {
     :root {
         --text: #9ca3af;
@@ -52,6 +64,11 @@
     }
 }
 
+/*
+ * #root: The React mount point. Styled as a centered, max-width column
+ * to match the Blogger theme's content area. Uses `svh` (small viewport
+ * height) to avoid layout shifts from mobile browser chrome.
+ */
 #root {
     width: 1126px;
     max-width: 100%;

@@ -8,6 +8,8 @@ interface PostCardProps {
     onImageClick: (imageUrl: string[]) => void;
 }
 
+// Tailwind class strings are pre-built as constants to avoid object recreation
+// on every render, which would break memo() optimisation in PostsContainer.
 const articleStyles = ['h-[95vh]', 'bg-gray-900', 'rounded-xl', 'p-4', 'sm:p-6', 'md:p-8', 'shadow-lg', 'hover:shadow-xl', 'transition-all', 'duration-300', 'hover:-translate-y-1'].join(' ');
 const titleStyles = ['text-gray-100', 'text-xl', 'sm:text-2xl', 'md:text-3xl', 'font-bold', 'mb-3', 'sm:mb-4', 'leading-tight', 'truncate', 'max-w-full'].join(' ');
 const metaContainerStyles = ['mb-4', 'sm:mb-5', 'pb-3', 'sm:pb-4', 'border-b-2', 'border-gray-800'].join(' ');
@@ -24,13 +26,27 @@ const paragraphStyles = '[&_p]:mb-4';
 const linkStyles = ['[&_a]:text-indigo-400', '[&_a]:no-underline', '[&_a]:border-b', '[&_a]:border-transparent', '[&_a]:transition-colors', '[&_a:hover]:border-indigo-400'].join(' ');
 const proseContentStyles = ['prose-content', 'text-gray-300', 'leading-relaxed', 'text-sm', 'sm:text-base', 'max-h-[70vh]', 'overflow-y-auto', imageStyles, imageLinkStyles, paragraphStyles, linkStyles, videoStyles, separatorStyles].join(' ');
 
-/** Displays a single blog post as a full-viewport card with title, metadata, and rendered HTML content. */
+/**
+ * Displays a single blog post as a full-viewport card.
+ *
+ * Layout (top to bottom):
+ * 1. Title (truncated with ellipsis)
+ * 2. Metadata: formatted date + labels with overflow indicator
+ * 3. Rendered HTML content (from Blogger's post body)
+ *
+ * Image click handling uses event delegation: a single click listener on the
+ * content container checks if the click target is an `<a>` wrapping an `<img>`,
+ * and if so, opens the image gallery modal with all post images.
+ */
 export function PostCard({ post, onImageClick }: PostCardProps) {
     const contentRef = useRef<HTMLDivElement>(null);
     const [hoveringLabels, setHoveringLabels] = useState(false);
     const labelsRef = useRef<HTMLDivElement>(null);
+    /** Whether the labels row overflows its container (hides the "+N" indicator when false). */
     const [overflows, setOverflows] = useState(false);
 
+    // Measure whether labels overflow after render.
+    // scrollWidth > clientWidth means content is wider than the visible area.
     useEffect(() => {
         const el = labelsRef.current;
         if (el) setOverflows(el.scrollWidth > el.clientWidth);
@@ -40,6 +56,10 @@ export function PostCard({ post, onImageClick }: PostCardProps) {
      * Delegated click listener on the content container.
      * When an `<a>` wrapping an `<img>` is clicked, extracts all image URLs
      * from the post content and opens the image gallery modal.
+     *
+     * Event delegation is used instead of per-image listeners because the
+     * content is injected via dangerouslySetInnerHTML, so we can't attach
+     * React event handlers to inner elements.
      */
     useEffect(() => {
         const contentDiv = contentRef.current;
@@ -71,6 +91,12 @@ export function PostCard({ post, onImageClick }: PostCardProps) {
                         year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
                     })}
                 </span>
+                {/*
+                  Labels container with expand-on-hover.
+                  By default, labels are in a single row with overflow hidden.
+                  On hover, max-height expands to reveal all labels (calculated
+                  as labelCount * 2rem + 1rem padding).
+                */}
                 <div
                     className={labelsWrapperStyles}
                     style={{ maxHeight: hoveringLabels ? (post.labels.length * 2 + 1) + 'rem' : '2rem' }}
@@ -82,6 +108,11 @@ export function PostCard({ post, onImageClick }: PostCardProps) {
                             <span key={index} className={labelStyles}>{label}</span>
                         ))}
                     </div>
+                    {/*
+                      "+N" overflow indicator: shown when labels don't fit in one row
+                      and the user isn't hovering. Uses a gradient fade from the
+                      card background to transparent so it blends seamlessly.
+                    */}
                     {overflows && !hoveringLabels && (
                         <div style={{
                             position: 'absolute', right: 0, top: 0,

@@ -1,4 +1,11 @@
-/** Runtime configuration shared across services. */
+/**
+ * Runtime configuration shared across services.
+ *
+ * Loaded once and cached for the lifetime of the page. The config source differs
+ * between development and production:
+ * - Development: reads from hiddenEnv.json (gitignored) and Vite env vars.
+ * - Production: reads from a #HiddenEnv DOM element injected by the Blogger theme.
+ */
 export interface Config {
     /** URL or path to the internal Blogger HTML page to scrape. */
     MAIN_POST_SOURCE_URL: string;
@@ -9,14 +16,20 @@ export interface Config {
     APPS_SCRIPT_URL: string;
 }
 
+/** Cached config to avoid re-parsing on every getConfig() call. */
 let cachedConfig: Config | null = null;
 
 /**
- * Loads the app configuration.
+ * Loads the app configuration from the appropriate source.
  *
- * - In development: reads `hiddenEnv.json` (gitignored) plus `VITE_*` env vars.
- * - In production: reads from the `#HiddenEnv` DOM element's `data-info` attribute
- *   (injected by the Blogger theme).
+ * In development (import.meta.env.DEV), the config comes from two places:
+ * 1. `hiddenEnv.json` — a gitignored file in the project root containing
+ *    secrets like APPS_SCRIPT_URL.
+ * 2. Vite env vars (`VITE_*`) — for values that can be committed.
+ *
+ * In production, the Blogger theme template injects a `<div id="HiddenEnv">`
+ * element whose `data-info` attribute contains a JSON string with the config.
+ * This avoids exposing secrets in the built JS bundle.
  */
 async function loadConfig(): Promise<Config> {
     if (import.meta.env.DEV) {
@@ -29,6 +42,7 @@ async function loadConfig(): Promise<Config> {
         };
     }
 
+    // Production: parse config from the DOM element injected by Blogger theme.
     const element = document.querySelector('#HiddenEnv') as HTMLElement | null;
     const raw = element?.dataset?.info;
     const parsed: Partial<Config> = raw ? JSON.parse(raw) : {};
@@ -40,7 +54,7 @@ async function loadConfig(): Promise<Config> {
 
 /**
  * Returns the app configuration, loading it on first call and caching thereafter.
- * Safe to call multiple times from any module.
+ * Safe to call multiple times from any module — the async load only happens once.
  */
 export async function getConfig(): Promise<Config> {
     if (!cachedConfig) {

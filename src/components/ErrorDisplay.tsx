@@ -3,7 +3,12 @@ interface ErrorDisplayProps {
     error: string | null;
 }
 
-/** Shows an error message with a retry button that reloads the page. */
+/**
+ * Inline error display with a retry button.
+ * Shown below the post list when a fetch fails (e.g., network error, CORS).
+ * Retry simply reloads the page to reset all state, which is the safest
+ * recovery path since partial state could be inconsistent.
+ */
 export function ErrorDisplay({ error }: ErrorDisplayProps) {
     return (
         <div className="flex flex-col items-center justify-center text-white text-center p-5">

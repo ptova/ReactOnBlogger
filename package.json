@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "git-deploy": "scripts/git-deploy.sh",
     "theme-deploy": "scripts/deploy-theme.sh",
-    "complete-deploy": "npm run build && npm run git-deploy && npm run theme-deploy"
+    "complete-deploy": "npm run build && npm run git-deploy && npm run theme-deploy",
+    "app-script-deploy": "scripts/deploy-appscript.sh"
   },
   "dependencies": {
     "react": "^19.2.4",

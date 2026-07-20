@@ -1,6 +1,13 @@
 import { Link } from 'react-router-dom';
 
-/** Top navigation bar with links to the internal feed and external-follow view. */
+/**
+ * Top navigation bar with two links:
+ * - "Home" → `/` (default internal source, HTML-scraped posts)
+ * - "Follow" → `/source/external` (Blogger API via Apps Script proxy)
+ *
+ * Styled with a translucent dark background and backdrop blur to sit
+ * cleanly over the gradient background defined in App.tsx.
+ */
 export function NavBar() {
     return (
         <nav className="bg-black/70 backdrop-blur-md rounded-xl p-3 px-6 mb-8 flex justify-between items-center flex-wrap gap-4 text-white font-bold">

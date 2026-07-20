@@ -9,7 +9,7 @@ AT="${APPS_AT:?Set APPS_AT (fetch from Google session)}"
 IMPLEMENTATION_ID_="${IMPLEMENTATION_ID:?Set IMPLEMENTATION_ID}"
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-CODE_FILE="${APPS_CODE_FILE:-$HERE/../resources/apps-script/Code.gs}"
+CODE_FILE="${APPS_CODE_FILE:-$HERE/../resources/apps-script/Code.js}"
 
 if [[ ! -f "$CODE_FILE" ]]; then
     echo "ERROR: $CODE_FILE not found"

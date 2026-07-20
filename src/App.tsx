@@ -1,10 +1,25 @@
+/**
+ * Root application component.
+ *
+ * Layout structure (outside-in):
+ * - ErrorBoundary catches any rendering errors in the tree and shows a fallback.
+ * - BrowserRouter provides client-side routing via react-router-dom.
+ * - CollapsibleHeader wraps the NavBar so it auto-hides on scroll-down.
+ * - Routes maps URL paths to page components:
+ *   • "/" → PostsContainer using the default (internal) source.
+ *   • "/source/:sourceType" → PostsContainer with a dynamic source
+ *     (e.g., "external" triggers the Apps Script proxy).
+ *
+ * Inline styles are used for the outer layout shell because Tailwind classes
+ * for full-viewport gradients don't compose well with the Blogger theme
+ * injection target.
+ */
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { PostsContainer } from './components/PostsContainer';
 import { CollapsibleHeader } from './components/CollapsibleHeader';
 import { NavBar } from './components/NavBar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-/** Root application component. */
 function App() {
     return (
         <ErrorBoundary>

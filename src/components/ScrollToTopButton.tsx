@@ -5,7 +5,11 @@ interface ScrollToTopButtonProps {
     threshold?: number;
 }
 
-/** Floating button that appears after scrolling past a threshold and scrolls to top on click. */
+/**
+ * Floating "scroll to top" button that appears in the bottom-right corner
+ * once the user scrolls past a threshold (default 300px). Uses smooth
+ * scrolling for a polished return-to-top animation.
+ */
 export function ScrollToTopButton({threshold = 300}: ScrollToTopButtonProps) {
     const [showButton, setShowButton] = useState(false);
 
